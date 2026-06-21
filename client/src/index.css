@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-game-bg text-white font-game m-0 p-0 overflow-hidden;
+    font-family: 'Arial Rounded MT Bold', 'Arial Black', Arial, sans-serif;
+  }
+
+  #root {
+    @apply w-screen h-screen;
+  }
+}
+
+@layer components {
+  .cell-tile {
+    @apply flex items-center justify-center rounded-xl font-black text-white select-none
+           border-4 border-cell-border bg-cell-bg
+           transition-all duration-100;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+
+  .btn-primary {
+    @apply bg-game-yellow text-game-bg font-black py-3 px-8 rounded-full text-xl
+           border-4 border-yellow-600
+           hover:scale-105 active:scale-95 transition-transform cursor-pointer;
+    box-shadow: 0 4px 0 #a87800, 0 6px 12px rgba(0,0,0,0.3);
+  }
+
+  .btn-primary:active {
+    box-shadow: 0 1px 0 #a87800;
+    transform: translateY(3px);
+  }
+
+  .btn-secondary {
+    @apply bg-game-purple text-white font-black py-3 px-8 rounded-full text-xl
+           border-4 border-purple-900
+           hover:scale-105 active:scale-95 transition-transform cursor-pointer;
+    box-shadow: 0 4px 0 #3a0080, 0 6px 12px rgba(0,0,0,0.3);
+  }
+
+  .word-badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold;
+  }
+
+  .word-accepted {
+    @apply word-badge bg-green-600 text-white;
+  }
+
+  .word-rejected {
+    @apply word-badge bg-red-600 text-white;
+  }
+
+  .word-duplicate {
+    @apply word-badge bg-gray-600 text-white line-through;
+  }
+}
