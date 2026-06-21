@@ -16,6 +16,8 @@ import {
 import { startGame, endGame } from './game.js'
 
 const PORT = parseInt(process.env.PORT ?? '3025', 10)
+const HOST = process.env.HOST ?? '127.0.0.1'
+const SOCKET_PATH = process.env.SOCKET_PATH ?? '/socket.io'
 
 loadDictionary()
 
@@ -24,6 +26,7 @@ app.use(express.json())
 
 const httpServer = createServer(app)
 const io = new Server(httpServer, {
+  path: SOCKET_PATH,
   cors: {
     origin: process.env.NODE_ENV === 'production' ? false : '*',
     methods: ['GET', 'POST'],
@@ -206,7 +209,7 @@ io.on('connection', (socket) => {
     wordSubmitTimestamps.delete(socket.id)
     const result = removePlayerBySocket(socket.id)
     if (result) {
-      const { room, player } = result
+      const { room } = result
       io.to(room.code).emit('room:state', toPublicRoom(room))
 
       // If game is playing and all disconnected, end it
@@ -221,6 +224,6 @@ io.on('connection', (socket) => {
 // Health check
 app.get('/health', (_req, res) => res.json({ ok: true }))
 
-httpServer.listen(PORT, () => {
-  console.log(`[server] Grille Party running on http://localhost:${PORT}`)
+httpServer.listen(PORT, HOST, () => {
+  console.log(`[server] Grille Party running on http://${HOST}:${PORT}`)
 })

@@ -7,7 +7,7 @@ type Props = {
 function getJoinUrl(roomCode: string): string {
   const { protocol, hostname, port } = window.location
   const host = port ? `${hostname}:${port}` : hostname
-  return `${protocol}//${host}/join/${roomCode}`
+  return `${protocol}//${host}${import.meta.env.BASE_URL}join/${roomCode}`
 }
 
 export default function QRJoin({ roomCode }: Props) {

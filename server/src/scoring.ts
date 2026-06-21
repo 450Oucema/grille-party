@@ -4,12 +4,6 @@ import { canFormWord } from './grid.js'
 import type { GridCell } from './types.js'
 
 export function wordScore(word: string): number {
-  // QU cell counts as 2 letters
-  const len = word.split('').reduce((n, ch, i, arr) => {
-    if (ch === 'Q' && arr[i + 1] === 'U') return n // skip Q in QU pair
-    return n + 1
-  }, 0)
-  // Simpler: normalize to plain letters, QU → 2 chars already there
   const normLen = normalize(word).length
   return 3 + Math.max(0, normLen - 3)
 }

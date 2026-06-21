@@ -9,7 +9,7 @@ Clone local du jeu **Boggle Party** (Netflix Games), jouable en réseau local sa
 ```
 [TV / Écran principal]  →  http://localhost:5173
         ↑  Socket.IO  ↓
-[Serveur Node.js]  :3025
+[Serveur Node.js]  :3035
         ↑  Socket.IO  ↓
 [Téléphones joueurs]  →  http://<ip-locale>:5173/join/CODE
 ```
@@ -61,7 +61,7 @@ npm run build
 npm run start
 ```
 
-Le serveur tourne sur le port `3025` et sert le client compilé.
+Le backend tourne sur `127.0.0.1:3035`. Le frontend compilé est servi par nginx.
 
 ---
 
@@ -69,8 +69,13 @@ Le serveur tourne sur le port `3025` et sert le client compilé.
 
 ```env
 # .env
-PORT=3025
-NODE_ENV=development
+NODE_ENV=production
+HOST=127.0.0.1
+PORT=3035
+SOCKET_PATH=/g/grille-party/socket.io
+VITE_BASE_PATH=/g/grille-party/
+VITE_BACKEND_PORT=3035
+VITE_SOCKET_PATH=/g/grille-party/socket.io
 ```
 
 ---
@@ -219,36 +224,73 @@ npm test
 
 ---
 
-## Déploiement VPS (nginx + PM2)
+## Déploiement production actuel
 
-### Build
+URL : `https://oucema.fr/g/grille-party/`
+
+- Frontend Vite : `/var/www/oucema.fr/current/g/grille-party/`
+- Backend Socket.IO : `127.0.0.1:3035`
+- Socket.IO public : `/g/grille-party/socket.io`
+- Healthcheck : `https://oucema.fr/g/grille-party/health`
+- Process manager : PM2 app `grille-party`
+
+### Build + publication frontend
 
 ```bash
 npm run build
+sudo mkdir -p /var/www/oucema.fr/current/g/grille-party
+sudo rsync -a --delete client/dist/ /var/www/oucema.fr/current/g/grille-party/
 ```
 
 ### PM2
 
 ```bash
-pm2 start dist/index.js --name boggle-party
+npm run build
+pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save
 ```
 
 ### nginx
 
+Dans le server block `oucema.fr` :
+
 ```nginx
-location /boggle/ {
-    proxy_pass http://127.0.0.1:3025/;
+location = /g/grille-party/health {
+    proxy_pass http://127.0.0.1:3035/health;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location ^~ /g/grille-party/socket.io {
+    proxy_pass http://127.0.0.1:3035;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_cache_bypass $http_upgrade;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 86400;
+}
+
+location ^~ /g/grille-party/ {
+    try_files $uri $uri/ /g/grille-party/index.html;
 }
 ```
 
-> Si tu déploies sous un sous-chemin, configure `base` dans `vite.config.ts` et `PUBLIC_BASE_URL` dans `.env`.
+### Vérification
+
+```bash
+npm run test
+npm run lint
+npm run build
+curl -fsS http://127.0.0.1:3035/health
+curl -fsS https://oucema.fr/g/grille-party/health
+curl -fsS 'https://oucema.fr/g/grille-party/socket.io/?EIO=4&transport=polling'
+```
 
 ---
 
