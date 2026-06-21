@@ -91,7 +91,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
   }, [tryAddCell])
 
   // Taille dynamique : la grille prend presque toute la largeur d'écran
-  const gapPx = size <= 4 ? 8 : 5
+  const gapPx = size <= 4 ? 12 : 10
   const sidePad = 16 // px de padding total (8px chaque côté)
   const totalGap = (size - 1) * gapPx
   const cellPx = `calc((100vw - ${sidePad + totalGap}px) / ${size})`

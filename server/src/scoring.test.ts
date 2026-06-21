@@ -53,7 +53,7 @@ describe('wordScore', () => {
 })
 
 describe('computeResults', () => {
-  it('cancels duplicate words between players', () => {
+  it('duplicate words: both players score base points but no bonus', () => {
     const players = new Map<string, Player>([
       ['p1', makePlayer('p1', ['CHAT'])],
       ['p2', makePlayer('p2', ['CHAT'])],
@@ -61,11 +61,12 @@ describe('computeResults', () => {
     const results = computeResults(players, GRID)
     const p1 = results.find(r => r.playerId === 'p1')!
     const p2 = results.find(r => r.playerId === 'p2')!
-    expect(p1.totalScore).toBe(0)
-    expect(p2.totalScore).toBe(0)
+    // CHAT = 4 pts (wordScore), no +1 bonus since duplicated
+    expect(p1.totalScore).toBe(4)
+    expect(p2.totalScore).toBe(4)
   })
 
-  it('scores unique words', () => {
+  it('unique words get base score + 1 bonus', () => {
     const players = new Map<string, Player>([
       ['p1', makePlayer('p1', ['CHAT'])],
       ['p2', makePlayer('p2', ['CHIEN'])],
@@ -73,8 +74,8 @@ describe('computeResults', () => {
     const results = computeResults(players, GRID)
     const p1 = results.find(r => r.playerId === 'p1')!
     const p2 = results.find(r => r.playerId === 'p2')!
-    expect(p1.totalScore).toBe(4) // CHAT = 4 letters = 3+1 = 4pts
-    expect(p2.totalScore).toBe(5) // CHIEN = 5 letters = 3+2 = 5pts
+    expect(p1.totalScore).toBe(5) // CHAT = 4 + 1 bonus = 5
+    expect(p2.totalScore).toBe(6) // CHIEN = 5 + 1 bonus = 6
   })
 
   it('rejects words not in grid', () => {

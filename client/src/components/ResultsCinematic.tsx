@@ -5,6 +5,7 @@ import { AVATARS } from '../types'
 type Props = {
   results: PlayerResult[]
   onDone: () => void
+  hideReplay?: boolean
 }
 
 type RevealWord = {
@@ -56,7 +57,7 @@ function AnimatedScore({ target, duration = 1200 }: { target: number; duration?:
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-export default function ResultsCinematic({ results, onDone }: Props) {
+export default function ResultsCinematic({ results, onDone, hideReplay }: Props) {
   const [phase, setPhase] = useState<Phase>('buzzer')
   const [revealIdx, setRevealIdx] = useState(-1)
   const [showScores, setShowScores] = useState(false)
@@ -233,12 +234,14 @@ export default function ResultsCinematic({ results, onDone }: Props) {
             ))}
           </div>
 
-          <button
-            onClick={onDone}
-            className="btn-primary text-2xl mt-2"
-          >
-            🔄 Rejouer
-          </button>
+          {!hideReplay && (
+            <button
+              onClick={onDone}
+              className="btn-primary text-2xl mt-2"
+            >
+              🔄 Rejouer
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -7,7 +7,6 @@ import Board from '../components/Board'
 import DraggableBoard from '../components/DraggableBoard'
 import Timer from '../components/Timer'
 import PlayerList from '../components/PlayerList'
-import ResultsTable from '../components/ResultsTable'
 import ResultsCinematic from '../components/ResultsCinematic'
 
 type Feedback = {
@@ -161,19 +160,7 @@ export default function RoomPage() {
 
         {/* Results */}
         {phase === 'results' && results && (
-          <div className="flex-1 overflow-auto p-4 flex flex-col gap-4">
-            <div className="text-2xl font-black text-game-yellow text-center">Résultats !</div>
-            {(() => {
-              const me = results.find(r => r.playerId === playerId)
-              return me ? (
-                <div className="bg-game-blue rounded-2xl p-4 border-2 border-game-yellow text-center">
-                  <div className="text-4xl font-black text-game-yellow">{me.totalScore} pts</div>
-                  <div className="text-blue-300">{me.wordCount} mots valides</div>
-                </div>
-              ) : null
-            })()}
-            <ResultsTable results={results} myPlayerId={playerId ?? undefined} />
-          </div>
+          <ResultsCinematic results={results} onDone={handleRestart} hideReplay />
         )}
       </div>
     )

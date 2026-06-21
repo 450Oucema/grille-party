@@ -37,8 +37,9 @@ export function computeResults(
       const isDuplicated = dupCount > 1
 
       let score = 0
-      if (validDict && validPath && !isDuplicated) {
-        score = wordScore(norm)
+      if (validDict && validPath) {
+        // Tous les mots valides rapportent des points ; +1 bonus si personne d'autre ne l'a trouvé
+        score = wordScore(norm) + (isDuplicated ? 0 : 1)
       }
 
       totalScore += score
@@ -62,7 +63,7 @@ export function computeResults(
       playerName: player.name,
       avatar: player.avatar,
       totalScore,
-      wordCount: wordResults.filter(w => w.score > 0).length,
+      wordCount: wordResults.filter(w => w.validDictionary && w.validPath).length,
       words: wordResults,
       bestWord: bestScore > 0 ? bestWord : null,
     })
