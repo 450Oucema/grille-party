@@ -60,6 +60,7 @@ export function removePlayerBySocket(socketId: string): { room: Room; player: Pl
 
 export function getRoomBySocket(socketId: string): Room | undefined {
   for (const room of rooms.values()) {
+    if (room.hostSocketId === socketId) return room
     for (const player of room.players.values()) {
       if (player.socketId === socketId) return room
     }

@@ -199,6 +199,7 @@ io.on('connection', (socket) => {
     room.grid = undefined
     room.startedAt = undefined
     room.endsAt = undefined
+    room.lastResults = undefined
     for (const p of room.players.values()) {
       p.words = new Set()
     }

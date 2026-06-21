@@ -47,7 +47,15 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
   const tryAddCell = useCallback((r: number, c: number) => {
     if (!draggingRef.current) return
     const p = pathRef.current
-    if (p.some(cell => cell.r === r && cell.c === c)) return
+    const existingIdx = p.findIndex(cell => cell.r === r && cell.c === c)
+    if (existingIdx !== -1) {
+      // Backtrack: glisser en arrière sur une case déjà sélectionnée tronque le chemin
+      if (existingIdx === p.length - 1) return
+      const backtracked = p.slice(0, existingIdx + 1)
+      pathRef.current = backtracked
+      setPath([...backtracked])
+      return
+    }
     const last = p[p.length - 1]
     if (!last || !isAdjacent(last, { r, c })) return
     const next = [...p, { r, c }]
@@ -82,8 +90,12 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     return () => el.removeEventListener('touchmove', onTouchMove)
   }, [tryAddCell])
 
-  const cellSize = size <= 4 ? 'w-16 h-16 text-3xl' : 'w-12 h-12 text-xl'
-  const gapSize = size <= 4 ? 'gap-2' : 'gap-1.5'
+  // Taille dynamique : la grille prend presque toute la largeur d'écran
+  const gapPx = size <= 4 ? 8 : 5
+  const sidePad = 16 // px de padding total (8px chaque côté)
+  const totalGap = (size - 1) * gapPx
+  const cellPx = `calc((100vw - ${sidePad + totalGap}px) / ${size})`
+  const fontPx = `calc((100vw - ${sidePad + totalGap}px) / ${size} * ${size <= 4 ? 0.42 : 0.38})`
 
   const lastCell = path[path.length - 1]
   const word = getWord(path, grid)
@@ -99,7 +111,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     lastFeedback?.status === 'rejected' ? `✗ ${lastFeedback.word}` : ''
 
   return (
-    <div className="flex flex-col items-center gap-3 select-none touch-none">
+    <div className="w-full flex flex-col items-center gap-3 select-none touch-none" style={{ paddingLeft: sidePad / 2, paddingRight: sidePad / 2 }}>
       {/* Word being formed */}
       <div className="h-12 flex items-center justify-center">
         {path.length > 0 ? (
@@ -121,14 +133,15 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
       {/* Grid */}
       <div
         ref={containerRef}
-        className={`flex flex-col ${gapSize}`}
+        className="flex flex-col w-full"
+        style={{ gap: gapPx }}
         onMouseLeave={endDrag}
         onMouseUp={endDrag}
         onTouchEnd={endDrag}
         onTouchCancel={endDrag}
       >
         {grid.map((row, r) => (
-          <div key={r} className={`flex ${gapSize}`}>
+          <div key={r} className="flex w-full" style={{ gap: gapPx }}>
             {row.map((cell, c) => {
               const inPath = path.some(p => p.r === r && p.c === c)
               const isLast = lastCell?.r === r && lastCell?.c === c
@@ -147,7 +160,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
                     startDrag(r, c)
                   }}
                   className={`
-                    ${cellSize} flex items-center justify-center
+                    flex items-center justify-center shrink-0
                     rounded-xl font-black border-4 transition-all duration-75
                     cursor-pointer
                     ${isLast
@@ -160,6 +173,9 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
                     }
                   `}
                   style={{
+                    width: cellPx,
+                    height: cellPx,
+                    fontSize: fontPx,
                     boxShadow: isLast
                       ? '0 0 20px rgba(255,204,0,0.8), inset 0 1px 0 rgba(255,255,255,0.4)'
                       : inPath
@@ -169,7 +185,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
                   }}
                 >
                   {cell.letter === 'QU'
-                    ? <span className="text-[0.7em]">Qu</span>
+                    ? <span style={{ fontSize: '0.7em' }}>Qu</span>
                     : cell.letter}
 
                   {/* Path index bubble */}

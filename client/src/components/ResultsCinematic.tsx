@@ -10,8 +10,7 @@ type Props = {
 type RevealWord = {
   word: string
   score: number
-  isDuplicate: boolean
-  players: string[] // player names who found it
+  players: string[]
 }
 
 type Phase = 'buzzer' | 'words' | 'scores' | 'podium'
@@ -29,13 +28,12 @@ function buildRevealList(results: PlayerResult[]): RevealWord[] {
   }
   const list: RevealWord[] = []
   for (const [word, { score, players }] of seen) {
-    list.push({ word, score, isDuplicate: score === 0 && players.length > 1, players })
+    const isDuplicate = score === 0 && players.length > 1
+    if (!isDuplicate) {
+      list.push({ word, score, players })
+    }
   }
-  // Show unique words first (scored), then duplicates
-  return list.sort((a, b) => {
-    if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? 1 : -1
-    return b.score - a.score
-  })
+  return list.sort((a, b) => b.score - a.score)
 }
 
 function AnimatedScore({ target, duration = 1200 }: { target: number; duration?: number }) {
@@ -79,8 +77,7 @@ export default function ResultsCinematic({ results, onDone }: Props) {
         setRevealIdx(i)
         i++
         if (i < revealList.length) {
-          const delay = revealList[i - 1]?.isDuplicate ? 600 : 800
-          timer = setTimeout(next, delay)
+          timer = setTimeout(next, 800)
         } else {
           timer = setTimeout(() => setPhase('scores'), 800)
         }
@@ -137,32 +134,18 @@ export default function ResultsCinematic({ results, onDone }: Props) {
                 className="flex flex-col items-center gap-2 animate-bounce-in"
               >
                 <div
-                  className={`text-6xl font-black tracking-widest ${
-                    currentWord.isDuplicate ? 'text-gray-400 line-through' : 'text-game-yellow'
-                  }`}
-                  style={{
-                    textShadow: currentWord.isDuplicate
-                      ? 'none'
-                      : '0 0 30px rgba(255,204,0,0.8)',
-                  }}
+                  className="text-6xl font-black tracking-widest text-game-yellow"
+                  style={{ textShadow: '0 0 30px rgba(255,204,0,0.8)' }}
                 >
                   {currentWord.word}
                 </div>
                 <div className="flex items-center gap-3">
-                  {currentWord.isDuplicate ? (
-                    <span className="text-gray-400 text-xl font-bold">
-                      ✗ ANNULÉ — trouvé par {currentWord.players.join(' & ')}
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-green-400 text-2xl font-black">
-                        +{currentWord.score} pts
-                      </span>
-                      <span className="text-blue-300 text-lg">
-                        · {currentWord.players[0]}
-                      </span>
-                    </>
-                  )}
+                  <span className="text-green-400 text-2xl font-black">
+                    +{currentWord.score} pts
+                  </span>
+                  <span className="text-blue-300 text-lg">
+                    · {currentWord.players[0]}
+                  </span>
                 </div>
               </div>
             )}
@@ -173,14 +156,10 @@ export default function ResultsCinematic({ results, onDone }: Props) {
             {revealList.slice(0, revealIdx).reverse().slice(0, 20).map((w, i) => (
               <span
                 key={w.word}
-                className={`px-3 py-1 rounded-full text-sm font-bold ${
-                  w.isDuplicate
-                    ? 'bg-gray-700 text-gray-400 line-through'
-                    : 'bg-green-700 text-white'
-                }`}
+                className="px-3 py-1 rounded-full text-sm font-bold bg-green-700 text-white"
                 style={{ opacity: Math.max(0.3, 1 - i * 0.08) }}
               >
-                {w.isDuplicate ? '✗' : `+${w.score}`} {w.word}
+                +{w.score} {w.word}
               </span>
             ))}
           </div>
