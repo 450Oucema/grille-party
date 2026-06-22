@@ -26,7 +26,7 @@ export default function HostPage() {
   }
 
   return (
-    <div className="game-screen flex flex-col items-center justify-center gap-10 p-6">
+    <div className="game-screen flex flex-col items-center justify-center gap-8 overflow-y-auto p-4 sm:p-6">
       {/* Stars background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 28 }).map((_, i) => (
@@ -46,20 +46,20 @@ export default function HostPage() {
         ))}
       </div>
 
-      <div className="game-content flex flex-col items-center gap-8">
-        <GameLogo size="lg" subtitle="Le jeu de mots pour toute la famille" />
+      <div className="game-content flex w-full max-w-5xl flex-col items-center gap-6 py-6 sm:gap-8">
+        <GameLogo size="md" subtitle="Le jeu de mots pour toute la famille" />
 
         {/* Grid preview decoration */}
-        <div className="cartoon-card flex gap-3 p-4">
+        <div className="cartoon-card flex max-w-full gap-2 overflow-hidden p-3 sm:gap-3 sm:p-4">
           {['G', 'R', 'I', 'L', 'L', 'E'].map((l, i) => (
-            <div key={i} className="cell-tile h-16 w-16 text-4xl">{l}</div>
+            <div key={i} className="cell-tile h-11 w-11 text-2xl sm:h-16 sm:w-16 sm:text-4xl">{l}</div>
           ))}
         </div>
 
         <button
           onClick={createRoom}
           disabled={loading}
-          className="btn-primary mt-2 px-16 py-5 text-3xl"
+          className="btn-primary mt-2 w-full max-w-sm px-8 py-4 text-2xl sm:px-16 sm:py-5 sm:text-3xl"
         >
           {loading ? '...' : 'Créer une partie'}
         </button>

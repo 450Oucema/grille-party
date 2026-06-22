@@ -18,6 +18,8 @@ function getWord(path: CellPos[], grid: GridCell[][]): string {
   return path.map(({ r, c }) => grid[r][c].letter).join('')
 }
 
+const TOUCH_HIT_ZONE_RATIO = 0.58
+
 export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled }: Props) {
   const [path, setPath] = useState<CellPos[]>([])
   const pathRef = useRef<CellPos[]>([])
@@ -26,10 +28,23 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
 
   const size = grid.length
 
-  const getCellFromPoint = (x: number, y: number): CellPos | null => {
+  const isInsideTouchHitZone = (cell: HTMLElement, x: number, y: number): boolean => {
+    const rect = cell.getBoundingClientRect()
+    const insetX = rect.width * (1 - TOUCH_HIT_ZONE_RATIO) / 2
+    const insetY = rect.height * (1 - TOUCH_HIT_ZONE_RATIO) / 2
+    return (
+      x >= rect.left + insetX &&
+      x <= rect.right - insetX &&
+      y >= rect.top + insetY &&
+      y <= rect.bottom - insetY
+    )
+  }
+
+  const getCellFromPoint = (x: number, y: number, strictTouchHitZone = false): CellPos | null => {
     const el = document.elementFromPoint(x, y)
     const cell = el?.closest('[data-row]') as HTMLElement | null
     if (!cell) return null
+    if (strictTouchHitZone && !isInsideTouchHitZone(cell, x, y)) return null
     const r = parseInt(cell.dataset.row ?? '')
     const c = parseInt(cell.dataset.col ?? '')
     if (isNaN(r) || isNaN(c)) return null
@@ -82,7 +97,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     const onTouchMove = (e: TouchEvent) => {
       e.preventDefault()
       const touch = e.touches[0]
-      const cell = getCellFromPoint(touch.clientX, touch.clientY)
+      const cell = getCellFromPoint(touch.clientX, touch.clientY, true)
       if (cell) tryAddCell(cell.r, cell.c)
     }
 

@@ -211,24 +211,24 @@ export default function RoomPage() {
 
   // ─── HOST / TV VIEW ───────────────────────────────────────────────────────
   return (
-    <div className="game-screen flex flex-col overflow-hidden">
+    <div className="game-screen flex flex-col lg:h-screen lg:overflow-hidden">
       {/* ── LOBBY ── */}
       {phase === 'lobby' && (
-        <div className="game-content flex flex-1 items-center justify-center gap-10 p-8">
+        <div className="game-content flex flex-1 flex-col items-stretch gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:p-8">
           {/* Left: QR + code */}
-          <div className="flex flex-col items-center gap-6">
-            <GameLogo size="md" />
+          <div className="flex flex-col items-center gap-4 lg:gap-6">
+            <GameLogo size="sm" />
             {roomCode && <QRJoin roomCode={roomCode} />}
           </div>
 
           {/* Right: settings + player list + start */}
-          <div className="flex min-w-[360px] max-w-[440px] flex-col gap-5">
+          <div className="flex w-full flex-col gap-4 sm:gap-5 lg:min-w-[360px] lg:max-w-[440px]">
             {/* Settings */}
-            <div className="cartoon-panel flex flex-col gap-4 p-5">
+            <div className="cartoon-panel flex flex-col gap-4 p-4 sm:p-5">
               <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Paramètres</div>
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-black uppercase text-game-purple">Taille de grille</div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {[4, 6].map(s => (
                     <button
                       key={s}
@@ -246,7 +246,7 @@ export default function RoomPage() {
               </div>
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-black uppercase text-game-purple">Durée</div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {[{label:'2 min', s:120},{label:'3 min', s:180},{label:'5 min', s:300}].map(({label, s}) => (
                     <button
                       key={s}
@@ -267,7 +267,7 @@ export default function RoomPage() {
             {isHost && (
               <div className="cartoon-card p-4">
                 {currentPlayer ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="avatar-token h-12 w-12 text-2xl">A</div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
@@ -286,19 +286,19 @@ export default function RoomPage() {
                       <div className="text-sm font-black uppercase text-game-magenta">Depuis cet appareil</div>
                       <div className="text-lg font-black text-game-purple">Je participe aussi</div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         value={hostPlayerName}
                         onChange={(e) => setHostPlayerName(e.target.value.slice(0, 20))}
                         onKeyDown={(e) => e.key === 'Enter' && handleHostJoinAsPlayer()}
                         placeholder="Ton pseudo"
                         maxLength={20}
-                        className="min-w-0 flex-1 rounded-2xl border-[3px] border-game-purple bg-white px-3 py-2 text-base font-black text-game-purple placeholder-game-purple/45 shadow-cartoon-sm outline-none"
+                        className="min-w-0 flex-1 rounded-2xl border-[3px] border-game-purple bg-white px-3 py-3 text-base font-black text-game-purple placeholder-game-purple/45 shadow-cartoon-sm outline-none"
                       />
                       <button
                         onClick={handleHostJoinAsPlayer}
                         disabled={!hostPlayerName.trim()}
-                        className="btn-primary px-4 py-2 text-base"
+                        className="btn-primary px-4 py-3 text-base"
                       >
                         OK
                       </button>
@@ -324,9 +324,9 @@ export default function RoomPage() {
 
       {/* ── PLAYING ── */}
       {phase === 'playing' && room?.grid && room?.endsAt && (
-        <div className="game-content flex flex-1 gap-6 overflow-hidden p-6">
+        <div className="game-content flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:gap-6 lg:overflow-hidden lg:p-6">
           {/* Left: player scores */}
-          <div className="cartoon-panel flex w-64 shrink-0 flex-col gap-4 p-4">
+          <div className="cartoon-panel flex shrink-0 flex-col gap-4 p-4 lg:w-64">
             <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Joueurs</div>
             <PlayerList players={room.players} showWordCount />
           </div>
@@ -338,7 +338,7 @@ export default function RoomPage() {
           </div>
 
           {/* Right: stats */}
-          <div className="flex w-64 shrink-0 flex-col gap-4">
+          <div className="flex shrink-0 flex-col gap-4 lg:w-64">
             {isHost && currentPlayer && (
               <button onClick={() => setHostView('player')} className="btn-primary text-xl">
                 Jouer mes mots
