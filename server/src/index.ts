@@ -45,6 +45,10 @@ function rateLimitWord(socketId: string): boolean {
   return true
 }
 
+function isRoomHost(room: { hostSocketId?: string; hostToken: string }, socketId: string, hostToken?: string): boolean {
+  return room.hostSocketId === socketId || (!!hostToken && hostToken === room.hostToken)
+}
+
 io.on('connection', (socket) => {
   // Client requests current room state (reconnect / navigation)
   socket.on('room:sync', ({ roomCode, playerId, hostToken }: { roomCode: string; playerId?: string; hostToken?: string }) => {
@@ -108,20 +112,22 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 
-  socket.on('room:settings', ({ roomCode, gridSize, durationSec }: { roomCode: string; gridSize?: number; durationSec?: number }) => {
+  socket.on('room:settings', ({ roomCode, gridSize, durationSec, hostToken }: { roomCode: string; gridSize?: number; durationSec?: number; hostToken?: string }) => {
     const room = getRoom(roomCode)
-    if (!room || room.hostSocketId !== socket.id || room.phase !== 'lobby') return
+    if (!room || !isRoomHost(room, socket.id, hostToken) || room.phase !== 'lobby') return
+    room.hostSocketId = socket.id
     updateRoomSettings(room, { gridSize, durationSec })
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 
-  socket.on('room:start', ({ roomCode }: { roomCode: string }) => {
+  socket.on('room:start', ({ roomCode, hostToken }: { roomCode: string; hostToken?: string }) => {
     const room = getRoom(roomCode)
     if (!room) return
-    if (room.hostSocketId !== socket.id) {
+    if (!isRoomHost(room, socket.id, hostToken)) {
       socket.emit('error', { message: 'Seul le host peut lancer la partie.' })
       return
     }
+    room.hostSocketId = socket.id
     if (room.phase !== 'lobby') return
     if (room.players.size < 1) {
       socket.emit('error', { message: 'Au moins 1 joueur requis.' })
@@ -192,9 +198,10 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 
-  socket.on('room:restart', () => {
-    const room = getRoomBySocket(socket.id)
-    if (!room || room.hostSocketId !== socket.id) return
+  socket.on('room:restart', ({ roomCode, hostToken }: { roomCode?: string; hostToken?: string } = {}) => {
+    const room = roomCode ? getRoom(roomCode) : getRoomBySocket(socket.id)
+    if (!room || !isRoomHost(room, socket.id, hostToken)) return
+    room.hostSocketId = socket.id
     room.phase = 'lobby'
     room.grid = undefined
     room.startedAt = undefined

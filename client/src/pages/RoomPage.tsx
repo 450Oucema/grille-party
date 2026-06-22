@@ -37,6 +37,15 @@ export default function RoomPage() {
   const phase = room?.phase ?? 'lobby'
   const isPlayerView = !!playerId && (!isHost || (hostView === 'player' && phase !== 'results'))
 
+  const emitWhenConnected = useCallback((event: string, payload: unknown) => {
+    if (socket.connected) {
+      socket.emit(event, payload)
+      return
+    }
+    socket.connect()
+    socket.once('connect', () => socket.emit(event, payload))
+  }, [])
+
   useEffect(() => {
     socket.connect()
 
@@ -104,27 +113,27 @@ export default function RoomPage() {
   }, [roomCode, playerId, hostToken])
 
   const handleStart = () => {
-    socket.emit('room:start', { roomCode })
+    emitWhenConnected('room:start', { roomCode, hostToken: hostToken ?? undefined })
   }
 
   const handleSettings = (gridSize: number, durationSec: number) => {
-    socket.emit('room:settings', { roomCode, gridSize, durationSec })
+    emitWhenConnected('room:settings', { roomCode, gridSize, durationSec, hostToken: hostToken ?? undefined })
   }
 
   const handleRestart = () => {
-    socket.emit('room:restart')
+    emitWhenConnected('room:restart', { roomCode, hostToken: hostToken ?? undefined })
     setResults(null)
     setMyWords([])
   }
 
   const handleWordSubmit = useCallback((word: string) => {
-    socket.emit('word:submit', { roomCode, playerId, word })
-  }, [roomCode, playerId])
+    emitWhenConnected('word:submit', { roomCode, playerId, word })
+  }, [emitWhenConnected, roomCode, playerId])
 
   const handleHostJoinAsPlayer = () => {
     const playerName = hostPlayerName.trim()
     if (!roomCode || !playerName) return
-    socket.emit('room:join', { roomCode, playerName })
+    emitWhenConnected('room:join', { roomCode, playerName })
   }
 
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
