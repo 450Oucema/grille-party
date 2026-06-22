@@ -20,6 +20,7 @@ export type Room = {
   phase: RoomPhase
   createdAt: number
   hostSocketId?: string
+  hostToken: string
   players: Map<string, Player>
   grid?: GridCell[][]
   startedAt?: number

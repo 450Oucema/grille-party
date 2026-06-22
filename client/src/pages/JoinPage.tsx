@@ -16,6 +16,7 @@ export default function JoinPage() {
 
     socket.on('player:state', ({ id }: { id: string }) => {
       setPlayerId(id)
+      if (roomCode) sessionStorage.setItem(`playerId:${roomCode}`, id)
       sessionStorage.setItem('playerId', id)
       sessionStorage.setItem('roomCode', roomCode ?? '')
     })

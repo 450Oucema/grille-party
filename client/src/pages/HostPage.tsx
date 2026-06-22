@@ -10,7 +10,8 @@ export default function HostPage() {
   useEffect(() => {
     socket.connect()
 
-    socket.on('room:created', ({ roomCode }: { roomCode: string }) => {
+    socket.on('room:created', ({ roomCode, hostToken }: { roomCode: string; hostToken: string }) => {
+      sessionStorage.setItem(`hostToken:${roomCode}`, hostToken)
       navigate(`/room/${roomCode}`)
     })
 

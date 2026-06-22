@@ -19,19 +19,38 @@ type Feedback = {
 export default function RoomPage() {
   const { roomCode } = useParams<{ roomCode: string }>()
   const [searchParams] = useSearchParams()
-  const playerId = searchParams.get('player') ?? sessionStorage.getItem('playerId')
+  const hostToken = roomCode ? sessionStorage.getItem(`hostToken:${roomCode}`) : null
+  const initialPlayerId =
+    searchParams.get('player') ??
+    (roomCode ? sessionStorage.getItem(`playerId:${roomCode}`) : null)
 
-  const isMobile = !!playerId
-
+  const [playerId, setPlayerId] = useState<string | null>(initialPlayerId)
+  const [hostView, setHostView] = useState<'host' | 'player'>('host')
+  const [hostPlayerName, setHostPlayerName] = useState('')
   const [room, setRoom] = useState<PublicRoom | null>(null)
   const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [myWords, setMyWords] = useState<string[]>([])
 
+  const isHost = !!hostToken
+  const currentPlayer = room?.players.find(p => p.id === playerId)
+  const phase = room?.phase ?? 'lobby'
+  const isPlayerView = !!playerId && (!isHost || (hostView === 'player' && phase !== 'results'))
+
   useEffect(() => {
     socket.connect()
 
     socket.on('room:state', (r: PublicRoom) => setRoom(r))
+
+    socket.on('player:state', ({ id, words }: { id: string; words: string[] }) => {
+      setPlayerId(id)
+      setMyWords(words)
+      if (roomCode) {
+        sessionStorage.setItem(`playerId:${roomCode}`, id)
+        sessionStorage.setItem('roomCode', roomCode)
+      }
+      sessionStorage.setItem('playerId', id)
+    })
 
     socket.on('game:started', () => {
       setResults(null)
@@ -62,7 +81,11 @@ export default function RoomPage() {
     // Request current room state on (re)connect
     const syncRoom = () => {
       if (roomCode) {
-        socket.emit('room:sync', { roomCode, playerId: playerId ?? undefined })
+        socket.emit('room:sync', {
+          roomCode,
+          playerId: playerId ?? undefined,
+          hostToken: hostToken ?? undefined,
+        })
       }
     }
     socket.on('connect', syncRoom)
@@ -71,13 +94,14 @@ export default function RoomPage() {
     return () => {
       socket.off('connect', syncRoom)
       socket.off('room:state')
+      socket.off('player:state')
       socket.off('game:started')
       socket.off('game:ended')
       socket.off('word:accepted-local')
       socket.off('word:rejected-local')
       socket.off('error')
     }
-  }, [roomCode])
+  }, [roomCode, playerId, hostToken])
 
   const handleStart = () => {
     socket.emit('room:start', { roomCode })
@@ -97,10 +121,14 @@ export default function RoomPage() {
     socket.emit('word:submit', { roomCode, playerId, word })
   }, [roomCode, playerId])
 
-  const phase = room?.phase ?? 'lobby'
+  const handleHostJoinAsPlayer = () => {
+    const playerName = hostPlayerName.trim()
+    if (!roomCode || !playerName) return
+    socket.emit('room:join', { roomCode, playerName })
+  }
 
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
-  if (isMobile) {
+  if (isPlayerView) {
     if (phase === 'results' && results) {
       return <ResultsCinematic results={results} onDone={handleRestart} hideReplay />
     }
@@ -111,7 +139,7 @@ export default function RoomPage() {
         <div className="game-content flex items-center justify-between gap-2 px-3 py-3">
           <div className="status-pill bg-game-yellow px-3 py-2 text-lg text-game-purple">{roomCode}</div>
           <div className="min-w-0 truncate rounded-full bg-white px-3 py-2 text-sm font-black text-game-purple shadow-cartoon-sm">
-            {room?.players.find(p => p.id === playerId)?.name ?? ''}
+            {currentPlayer?.name ?? ''}
           </div>
           {phase === 'playing' && room?.endsAt && (
             <div className="scale-[.62] origin-right">
@@ -119,6 +147,17 @@ export default function RoomPage() {
             </div>
           )}
         </div>
+
+        {isHost && (
+          <div className="game-content px-3 pb-2">
+            <button
+              onClick={() => setHostView('host')}
+              className="btn-secondary w-full py-2 text-base"
+            >
+              Retour au salon
+            </button>
+          </div>
+        )}
 
         {/* Playing phase */}
         {phase === 'playing' && room?.grid && (
@@ -153,7 +192,9 @@ export default function RoomPage() {
             <GameLogo size="sm" />
             <div className="cartoon-card w-full max-w-sm p-6 text-center">
               <div className="text-2xl font-black text-game-purple">En attente du lancement...</div>
-              <div className="mt-2 font-extrabold text-game-blue">L'hôte prépare la grille</div>
+              <div className="mt-2 font-extrabold text-game-blue">
+                {isHost ? 'Tu peux revenir au salon pour lancer la partie' : "L'hôte prépare la grille"}
+              </div>
             </div>
             <div className="cartoon-panel w-full max-w-sm p-4">
               <div className="text-sm font-black uppercase text-game-magenta">Astuce</div>
@@ -223,6 +264,50 @@ export default function RoomPage() {
               </div>
             </div>
 
+            {isHost && (
+              <div className="cartoon-card p-4">
+                {currentPlayer ? (
+                  <div className="flex items-center gap-3">
+                    <div className="avatar-token h-12 w-12 text-2xl">A</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
+                      <div className="truncate text-lg font-black text-game-blue">{currentPlayer.name}</div>
+                    </div>
+                    <button
+                      onClick={() => setHostView('player')}
+                      className="btn-secondary px-4 py-2 text-base"
+                    >
+                      Jouer
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <div className="text-sm font-black uppercase text-game-magenta">Depuis cet appareil</div>
+                      <div className="text-lg font-black text-game-purple">Je participe aussi</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={hostPlayerName}
+                        onChange={(e) => setHostPlayerName(e.target.value.slice(0, 20))}
+                        onKeyDown={(e) => e.key === 'Enter' && handleHostJoinAsPlayer()}
+                        placeholder="Ton pseudo"
+                        maxLength={20}
+                        className="min-w-0 flex-1 rounded-2xl border-[3px] border-game-purple bg-white px-3 py-2 text-base font-black text-game-purple placeholder-game-purple/45 shadow-cartoon-sm outline-none"
+                      />
+                      <button
+                        onClick={handleHostJoinAsPlayer}
+                        disabled={!hostPlayerName.trim()}
+                        className="btn-primary px-4 py-2 text-base"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="status-pill self-start bg-game-yellow px-4 py-1 text-xl text-game-purple">
               Joueurs ({room?.players.length ?? 0})
             </div>
@@ -254,6 +339,11 @@ export default function RoomPage() {
 
           {/* Right: stats */}
           <div className="flex w-64 shrink-0 flex-col gap-4">
+            {isHost && currentPlayer && (
+              <button onClick={() => setHostView('player')} className="btn-primary text-xl">
+                Jouer mes mots
+              </button>
+            )}
             <div className="cartoon-card p-5 text-center">
               <div className="text-sm font-black uppercase text-game-purple">Total mots</div>
               <div className="cartoon-title-sm font-display text-7xl text-game-magenta">

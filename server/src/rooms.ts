@@ -1,4 +1,5 @@
 import type { Room, Player, PublicRoom, PublicPlayer } from './types.js'
+import { randomBytes } from 'crypto'
 
 const rooms = new Map<string, Room>()
 
@@ -19,6 +20,7 @@ export function createRoom(): Room {
     code,
     phase: 'lobby',
     createdAt: Date.now(),
+    hostToken: randomBytes(24).toString('hex'),
     players: new Map(),
     durationSec: 180,
     gridSize: 6,

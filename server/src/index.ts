@@ -47,7 +47,7 @@ function rateLimitWord(socketId: string): boolean {
 
 io.on('connection', (socket) => {
   // Client requests current room state (reconnect / navigation)
-  socket.on('room:sync', ({ roomCode, playerId }: { roomCode: string; playerId?: string }) => {
+  socket.on('room:sync', ({ roomCode, playerId, hostToken }: { roomCode: string; playerId?: string; hostToken?: string }) => {
     const room = getRoom(roomCode)
     if (!room) {
       socket.emit('error', { message: 'Salle introuvable.' })
@@ -62,8 +62,8 @@ io.on('connection', (socket) => {
         player.socketId = socket.id
         player.connected = true
       }
-    } else {
-      // host reconnect
+    }
+    if (hostToken && hostToken === room.hostToken) {
       room.hostSocketId = socket.id
     }
     socket.emit('room:state', toPublicRoom(room))
@@ -79,7 +79,7 @@ io.on('connection', (socket) => {
     const room = createRoom()
     room.hostSocketId = socket.id
     socket.join(room.code)
-    socket.emit('room:created', { roomCode: room.code })
+    socket.emit('room:created', { roomCode: room.code, hostToken: room.hostToken })
     socket.emit('room:state', toPublicRoom(room))
   })
 
