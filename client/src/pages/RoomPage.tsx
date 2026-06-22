@@ -8,6 +8,7 @@ import DraggableBoard from '../components/DraggableBoard'
 import Timer from '../components/Timer'
 import PlayerList from '../components/PlayerList'
 import ResultsCinematic from '../components/ResultsCinematic'
+import GameLogo from '../components/GameLogo'
 
 type Feedback = {
   word: string
@@ -100,19 +101,20 @@ export default function RoomPage() {
 
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
   if (isMobile) {
+    if (phase === 'results' && results) {
+      return <ResultsCinematic results={results} onDone={handleRestart} hideReplay />
+    }
+
     return (
-      <div
-        className="w-screen h-screen flex flex-col"
-        style={{ background: 'radial-gradient(ellipse, #1e3a8a 0%, #1a0a5e 100%)' }}
-      >
+      <div className="game-screen flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-blue-700">
-          <div className="font-black text-xl text-game-yellow">{roomCode}</div>
-          <div className="text-blue-300 text-sm">
+        <div className="game-content flex items-center justify-between gap-2 px-3 py-3">
+          <div className="status-pill bg-game-yellow px-3 py-2 text-lg text-game-purple">{roomCode}</div>
+          <div className="min-w-0 truncate rounded-full bg-white px-3 py-2 text-sm font-black text-game-purple shadow-cartoon-sm">
             {room?.players.find(p => p.id === playerId)?.name ?? ''}
           </div>
           {phase === 'playing' && room?.endsAt && (
-            <div className="text-right">
+            <div className="scale-[.62] origin-right">
               <Timer endsAt={room.endsAt} />
             </div>
           )}
@@ -120,9 +122,9 @@ export default function RoomPage() {
 
         {/* Playing phase */}
         {phase === 'playing' && room?.grid && (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="game-content flex flex-1 flex-col overflow-hidden">
             {/* Draggable board zone */}
-            <div className="flex items-center justify-center p-3 pb-0">
+            <div className="flex items-center justify-center p-2 pb-0">
               <DraggableBoard
                 grid={room.grid}
                 onSubmit={handleWordSubmit}
@@ -132,8 +134,8 @@ export default function RoomPage() {
             </div>
 
             {/* Word list */}
-            <div className="flex-1 overflow-auto px-4 pb-4 pt-2">
-              <div className="text-blue-300 text-xs mb-2 font-bold uppercase tracking-wide">
+            <div className="mx-3 mb-3 mt-2 flex-1 overflow-auto rounded-[24px] border-4 border-game-purple bg-white/90 px-4 pb-4 pt-3 shadow-cartoon">
+              <div className="mb-2 text-xs font-black uppercase text-game-purple">
                 Mes mots ({myWords.length})
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -147,63 +149,53 @@ export default function RoomPage() {
 
         {/* Lobby */}
         {phase === 'lobby' && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
-            <div className="text-6xl animate-bounce">⏳</div>
-            <div className="text-2xl font-black text-game-yellow text-center">
-              En attente du lancement…
+          <div className="game-content flex flex-1 flex-col items-center justify-center gap-6 p-6">
+            <GameLogo size="sm" />
+            <div className="cartoon-card w-full max-w-sm p-6 text-center">
+              <div className="text-2xl font-black text-game-purple">En attente du lancement...</div>
+              <div className="mt-2 font-extrabold text-game-blue">L'hôte prépare la grille</div>
             </div>
-            <div className="text-blue-300 text-center">
-              L'hôte va démarrer la partie
+            <div className="cartoon-panel w-full max-w-sm p-4">
+              <div className="text-sm font-black uppercase text-game-magenta">Astuce</div>
+              <div className="mt-1 text-lg font-extrabold text-game-purple">
+                Commence par repérer les terminaisons courtes.
+              </div>
             </div>
           </div>
         )}
 
-        {/* Results */}
-        {phase === 'results' && results && (
-          <ResultsCinematic results={results} onDone={handleRestart} hideReplay />
-        )}
       </div>
     )
   }
 
   // ─── HOST / TV VIEW ───────────────────────────────────────────────────────
   return (
-    <div
-      className="w-screen h-screen flex flex-col overflow-hidden"
-      style={{
-        background: 'radial-gradient(ellipse at center, #1e3a8a 0%, #1a0a5e 60%, #0a0030 100%)',
-      }}
-    >
+    <div className="game-screen flex flex-col overflow-hidden">
       {/* ── LOBBY ── */}
       {phase === 'lobby' && (
-        <div className="flex-1 flex items-center justify-center gap-16 p-8">
+        <div className="game-content flex flex-1 items-center justify-center gap-10 p-8">
           {/* Left: QR + code */}
           <div className="flex flex-col items-center gap-6">
-            <div
-              className="text-5xl font-black text-game-yellow text-center"
-              style={{ textShadow: '0 0 20px rgba(255,204,0,0.5)' }}
-            >
-              GRILLE PARTY
-            </div>
+            <GameLogo size="md" />
             {roomCode && <QRJoin roomCode={roomCode} />}
           </div>
 
           {/* Right: settings + player list + start */}
-          <div className="flex flex-col gap-5 min-w-72">
+          <div className="flex min-w-[360px] max-w-[440px] flex-col gap-5">
             {/* Settings */}
-            <div className="bg-game-blue/50 rounded-2xl p-4 border border-blue-600 flex flex-col gap-3">
-              <div className="text-blue-300 font-bold text-sm uppercase tracking-wide">Paramètres</div>
+            <div className="cartoon-panel flex flex-col gap-4 p-5">
+              <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Paramètres</div>
               <div className="flex flex-col gap-2">
-                <div className="text-white font-bold text-sm">Grille</div>
+                <div className="text-sm font-black uppercase text-game-purple">Taille de grille</div>
                 <div className="flex gap-2">
                   {[4, 6].map(s => (
                     <button
                       key={s}
                       onClick={() => handleSettings(s, room?.durationSec ?? 180)}
-                      className={`flex-1 py-2 rounded-xl font-black text-lg border-2 transition-all ${
+                      className={`segmented-option flex-1 text-lg ${
                         (room?.gridSize ?? 6) === s
-                          ? 'bg-game-yellow text-game-bg border-yellow-500'
-                          : 'bg-game-blue text-white border-blue-500 hover:border-blue-300'
+                          ? 'segmented-option-selected text-game-purple'
+                          : 'text-game-purple'
                       }`}
                     >
                       {s}×{s}
@@ -212,16 +204,16 @@ export default function RoomPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="text-white font-bold text-sm">Durée</div>
+                <div className="text-sm font-black uppercase text-game-purple">Durée</div>
                 <div className="flex gap-2">
                   {[{label:'2 min', s:120},{label:'3 min', s:180},{label:'5 min', s:300}].map(({label, s}) => (
                     <button
                       key={s}
                       onClick={() => handleSettings(room?.gridSize ?? 6, s)}
-                      className={`flex-1 py-2 rounded-xl font-black text-sm border-2 transition-all ${
+                      className={`segmented-option flex-1 text-sm ${
                         (room?.durationSec ?? 180) === s
-                          ? 'bg-game-yellow text-game-bg border-yellow-500'
-                          : 'bg-game-blue text-white border-blue-500 hover:border-blue-300'
+                          ? 'segmented-option-selected text-game-purple'
+                          : 'text-game-purple'
                       }`}
                     >
                       {label}
@@ -231,40 +223,49 @@ export default function RoomPage() {
               </div>
             </div>
 
-            <div className="text-2xl font-black text-white">
+            <div className="status-pill self-start bg-game-yellow px-4 py-1 text-xl text-game-purple">
               Joueurs ({room?.players.length ?? 0})
             </div>
-            {room && <PlayerList players={room.players} />}
+            <div className="max-h-[260px] overflow-auto pr-1">
+              {room && <PlayerList players={room.players} />}
+            </div>
 
-            {(room?.players.length ?? 0) > 0 && (
-              <button onClick={handleStart} className="btn-primary text-2xl">
-                🚀 Lancer la partie !
-              </button>
-            )}
+            <button onClick={handleStart} disabled={(room?.players.length ?? 0) === 0} className="btn-primary text-2xl">
+              Lancer la partie
+            </button>
           </div>
         </div>
       )}
 
       {/* ── PLAYING ── */}
       {phase === 'playing' && room?.grid && room?.endsAt && (
-        <div className="flex-1 flex gap-6 p-6 overflow-hidden">
+        <div className="game-content flex flex-1 gap-6 overflow-hidden p-6">
           {/* Left: player scores */}
-          <div className="w-56 flex flex-col gap-4 shrink-0">
-            <div className="text-blue-300 font-bold text-lg">Joueurs</div>
+          <div className="cartoon-panel flex w-64 shrink-0 flex-col gap-4 p-4">
+            <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Joueurs</div>
             <PlayerList players={room.players} showWordCount />
           </div>
 
           {/* Center: grid + timer */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-6">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6">
             <Timer endsAt={room.endsAt} />
             <Board grid={room.grid} />
           </div>
 
           {/* Right: stats */}
-          <div className="w-56 flex flex-col gap-4 shrink-0 items-end text-right">
-            <div className="text-blue-300 font-bold text-lg">Total mots</div>
-            <div className="text-game-yellow text-6xl font-black">
-              {room.players.reduce((s, p) => s + p.wordCount, 0)}
+          <div className="flex w-64 shrink-0 flex-col gap-4">
+            <div className="cartoon-card p-5 text-center">
+              <div className="text-sm font-black uppercase text-game-purple">Total mots</div>
+              <div className="cartoon-title-sm font-display text-7xl text-game-magenta">
+                {room.players.reduce((s, p) => s + p.wordCount, 0)}
+              </div>
+            </div>
+            <div className="cartoon-card p-5">
+              <div className="text-sm font-black uppercase text-game-purple">Mission</div>
+              <div className="mt-2 text-xl font-black text-game-blue">Trouvez le plus de mots uniques.</div>
+              <div className="mt-4 h-5 rounded-full border-[3px] border-game-purple bg-white p-0.5">
+                <div className="h-full animate-progress-fill rounded-full bg-game-magenta" />
+              </div>
             </div>
           </div>
         </div>

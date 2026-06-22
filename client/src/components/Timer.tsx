@@ -26,18 +26,13 @@ export default function Timer({ endsAt, onExpire }: Props) {
 
   return (
     <div
-      className={`font-black tabular-nums transition-all ${
+      className={`status-pill inline-flex min-w-[8rem] items-center justify-center px-5 py-2 font-display text-5xl font-extrabold tabular-nums transition-all ${
         isCritical
-          ? 'text-red-400 text-8xl animate-timer-pulse'
+          ? 'bg-game-red text-white animate-timer-pulse'
           : isUrgent
-          ? 'text-orange-400 text-7xl'
-          : 'text-game-yellow text-7xl'
+          ? 'bg-game-orange text-game-purple'
+          : 'bg-game-yellow text-game-purple'
       }`}
-      style={{
-        textShadow: isCritical
-          ? '0 0 20px rgba(239,68,68,0.8)'
-          : '0 0 20px rgba(255,204,0,0.5)',
-      }}
     >
       {mins}:{secs.toString().padStart(2, '0')}
     </div>

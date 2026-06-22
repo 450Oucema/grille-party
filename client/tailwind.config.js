@@ -4,40 +4,59 @@ export default {
   theme: {
     extend: {
       colors: {
-        'game-bg': '#1a0a5e',
-        'game-blue': '#2244cc',
-        'game-purple': '#6622cc',
-        'game-yellow': '#ffcc00',
-        'game-green': '#44dd44',
-        'game-red': '#ee3333',
-        'cell-bg': '#2233aa',
-        'cell-border': '#4455ee',
+        'game-bg': '#6EC6FF',
+        'game-sky': '#6EC6FF',
+        'game-cyan': '#21E0D6',
+        'game-mint': '#39E5B7',
+        'game-blue': '#2F62D9',
+        'game-violet': '#7B49FF',
+        'game-purple': '#28104B',
+        'game-ink': '#17012E',
+        'game-yellow': '#FFD94A',
+        'game-magenta': '#FF4DB8',
+        'game-lilac': '#E9D6FF',
+        'game-cream': '#FFF9F2',
+        'game-green': '#48E084',
+        'game-red': '#FF4B64',
+        'game-orange': '#FF9B52',
+        'cell-bg': '#7B49FF',
+        'cell-border': '#28104B',
         'cell-text': '#ffffff',
       },
       fontFamily: {
-        game: ['Arial Rounded MT Bold', 'Arial', 'sans-serif'],
+        display: ['"Baloo 2"', '"Nunito"', 'ui-rounded', 'system-ui', 'sans-serif'],
+        game: ['"Nunito"', 'ui-rounded', 'system-ui', 'sans-serif'],
+      },
+      boxShadow: {
+        cartoon: '0 7px 0 #17012E',
+        'cartoon-sm': '0 4px 0 #17012E',
+        'cartoon-lg': '0 10px 0 #17012E',
+        tile: '0 5px 0 #17012E, inset 0 -7px 0 rgba(23,1,46,.22), inset 0 3px 0 rgba(255,255,255,.45)',
       },
       animation: {
-        'bounce-in': 'bounceIn 0.3s ease-out',
+        'pop-in': 'popIn 0.22s ease-out both',
+        'bounce-in': 'popIn 0.24s ease-out both',
+        'bounce-soft': 'bounceSoft 1.25s ease-in-out infinite',
         'score-pop': 'scorePop 0.5s ease-out forwards',
-        'pulse-glow': 'pulseGlow 1s ease-in-out infinite',
         'shake': 'shake 0.3s ease-in-out',
-        'timer-pulse': 'timerPulse 1s ease-in-out infinite',
+        'timer-pulse': 'timerPulse 0.75s ease-in-out infinite',
+        'orbit': 'orbit 4.5s linear infinite',
+        'progress-fill': 'progressFill 1.4s ease-out infinite alternate',
       },
       keyframes: {
-        bounceIn: {
-          '0%': { transform: 'scale(0.8)', opacity: '0' },
-          '60%': { transform: 'scale(1.1)' },
+        popIn: {
+          '0%': { transform: 'scale(0.92)', opacity: '0' },
+          '70%': { transform: 'scale(1.05)', opacity: '1' },
           '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        bounceSoft: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-7px)' },
         },
         scorePop: {
           '0%': { transform: 'translateY(0) scale(1)', opacity: '1' },
           '50%': { transform: 'translateY(-30px) scale(1.3)', opacity: '1' },
           '100%': { transform: 'translateY(-60px) scale(1)', opacity: '0' },
-        },
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 10px rgba(255,204,0,0.5)' },
-          '50%': { boxShadow: '0 0 25px rgba(255,204,0,1)' },
         },
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },
@@ -47,6 +66,14 @@ export default {
         timerPulse: {
           '0%, 100%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(1.05)' },
+        },
+        orbit: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        progressFill: {
+          '0%': { width: '18%' },
+          '100%': { width: '82%' },
         },
       },
     },

@@ -91,19 +91,20 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
   }, [tryAddCell])
 
   // Taille dynamique : la grille prend presque toute la largeur d'écran
-  const gapPx = size <= 4 ? 12 : 10
-  const sidePad = 16 // px de padding total (8px chaque côté)
+  const gapPx = size <= 4 ? 10 : 8
+  const sidePad = 8 // px de padding total autour de la zone gestuelle
   const totalGap = (size - 1) * gapPx
-  const cellPx = `calc((100vw - ${sidePad + totalGap}px) / ${size})`
-  const fontPx = `calc((100vw - ${sidePad + totalGap}px) / ${size} * ${size <= 4 ? 0.42 : 0.38})`
+  const chromePx = 64 // page padding + border + inner grid padding
+  const cellPx = `calc((100vw - ${chromePx + totalGap}px) / ${size})`
+  const fontPx = `calc((100vw - ${chromePx + totalGap}px) / ${size} * ${size <= 4 ? 0.42 : 0.38})`
 
   const lastCell = path[path.length - 1]
   const word = getWord(path, grid)
 
-  const feedbackColor =
-    lastFeedback?.status === 'accepted' ? 'text-green-400' :
-    lastFeedback?.status === 'duplicate' ? 'text-gray-400' :
-    lastFeedback?.status === 'rejected' ? 'text-red-400' : ''
+  const feedbackClass =
+    lastFeedback?.status === 'accepted' ? 'word-accepted' :
+    lastFeedback?.status === 'duplicate' ? 'word-duplicate' :
+    lastFeedback?.status === 'rejected' ? 'word-rejected animate-shake' : ''
 
   const feedbackText =
     lastFeedback?.status === 'accepted' ? `✓ ${lastFeedback.word}` :
@@ -111,29 +112,26 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     lastFeedback?.status === 'rejected' ? `✗ ${lastFeedback.word}` : ''
 
   return (
-    <div className="w-full flex flex-col items-center gap-3 select-none touch-none" style={{ paddingLeft: sidePad / 2, paddingRight: sidePad / 2 }}>
+    <div className="flex w-full select-none touch-none flex-col items-center gap-3" style={{ paddingLeft: sidePad / 2, paddingRight: sidePad / 2 }}>
       {/* Word being formed */}
-      <div className="h-12 flex items-center justify-center">
+      <div className="flex h-14 items-center justify-center">
         {path.length > 0 ? (
-          <div
-            className="font-black text-3xl text-game-yellow tracking-widest"
-            style={{ textShadow: '0 0 15px rgba(255,204,0,0.7)' }}
-          >
+          <div className="status-pill bg-game-yellow px-5 py-2 font-display text-3xl font-extrabold text-game-purple">
             {word}
           </div>
         ) : lastFeedback ? (
-          <div className={`font-black text-xl ${feedbackColor} animate-bounce-in`}>
+          <div className={`animate-bounce-in text-xl ${feedbackClass}`}>
             {feedbackText}
           </div>
         ) : (
-          <div className="text-blue-400 text-sm">Glisse sur les lettres</div>
+          <div className="rounded-full bg-white px-4 py-2 text-sm font-black text-game-purple shadow-cartoon-sm">Glisse sur les lettres</div>
         )}
       </div>
 
       {/* Grid */}
       <div
         ref={containerRef}
-        className="flex flex-col w-full"
+        className="flex max-w-full flex-col rounded-[24px] border-4 border-game-purple bg-white/80 p-2 shadow-cartoon"
         style={{ gap: gapPx }}
         onMouseLeave={endDrag}
         onMouseUp={endDrag}
@@ -161,14 +159,14 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
                   }}
                   className={`
                     flex items-center justify-center shrink-0
-                    rounded-xl font-black border-4 transition-all duration-75
+                    rounded-xl font-display font-extrabold border-4 transition-all duration-75
                     cursor-pointer
                     ${isLast
-                      ? 'bg-game-yellow text-game-bg border-yellow-300 scale-110 z-10'
+                      ? 'bg-game-yellow text-game-purple border-game-purple scale-110 z-10'
                       : inPath
-                      ? 'bg-yellow-600 text-white border-yellow-500 scale-105'
+                      ? 'bg-game-yellow text-game-purple border-game-purple scale-105'
                       : canConnect && path.length > 0
-                      ? 'bg-blue-400 text-white border-blue-200'
+                      ? 'bg-game-cyan text-game-purple border-game-purple'
                       : 'cell-tile'
                     }
                   `}
@@ -176,11 +174,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
                     width: cellPx,
                     height: cellPx,
                     fontSize: fontPx,
-                    boxShadow: isLast
-                      ? '0 0 20px rgba(255,204,0,0.8), inset 0 1px 0 rgba(255,255,255,0.4)'
-                      : inPath
-                      ? '0 0 10px rgba(255,180,0,0.4)'
-                      : undefined,
+                    boxShadow: '0 5px 0 #17012E, inset 0 -7px 0 rgba(23,1,46,.18), inset 0 3px 0 rgba(255,255,255,.45)',
                     position: 'relative',
                   }}
                 >
@@ -206,12 +200,12 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
 
       {/* Submit hint */}
       {path.length >= 3 && (
-        <div className="text-blue-300 text-sm animate-pulse">
+        <div className="status-pill bg-game-mint px-4 py-1 text-sm text-game-purple animate-bounce-soft">
           Lâche pour valider
         </div>
       )}
       {path.length > 0 && path.length < 3 && (
-        <div className="text-blue-400 text-xs">
+        <div className="text-xs font-black text-game-purple">
           {3 - path.length} lettre{3 - path.length > 1 ? 's' : ''} de plus minimum
         </div>
       )}

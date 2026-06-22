@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
+import GameLogo from '../components/GameLogo'
 
 export default function JoinPage() {
   const { roomCode } = useParams<{ roomCode: string }>()
@@ -49,39 +50,39 @@ export default function JoinPage() {
 
   if (playerId) {
     return (
-      <div
-        className="w-screen h-screen flex flex-col items-center justify-center gap-6 p-6"
-        style={{ background: 'radial-gradient(ellipse, #1e3a8a 0%, #1a0a5e 100%)' }}
-      >
-        <div className="text-6xl animate-bounce">⏳</div>
-        <div className="text-3xl font-black text-game-yellow text-center">En attente du lancement…</div>
-        <div className="text-blue-300 text-xl text-center">
-          Code de salle : <span className="text-white font-black tracking-widest">{roomCode}</span>
-        </div>
-        <div className="text-blue-400 text-lg text-center">
-          L'hôte va lancer la partie depuis l'écran principal
+      <div className="game-screen flex flex-col items-center justify-center gap-6 p-6">
+        <div className="game-content flex w-full max-w-md flex-col items-center gap-6">
+          <GameLogo size="sm" />
+          <div className="relative h-28 w-28">
+            <div className="absolute inset-0 animate-orbit rounded-full border-4 border-dashed border-game-purple" />
+            <div className="avatar-token absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 text-3xl">A</div>
+          </div>
+          <div className="cartoon-card w-full p-6 text-center">
+            <div className="text-3xl font-black text-game-purple">En attente du lancement...</div>
+            <div className="mt-3 text-xl font-extrabold text-game-blue">
+              Code : <span className="cartoon-title-sm text-game-yellow">{roomCode}</span>
+            </div>
+          </div>
+          <div className="cartoon-panel w-full p-4">
+            <div className="text-sm font-black uppercase text-game-magenta">Astuce</div>
+            <div className="mt-1 text-lg font-extrabold text-game-purple">
+              Les diagonales comptent. Prépare tes meilleurs chemins.
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div
-      className="w-screen h-screen flex flex-col items-center justify-center gap-6 p-6"
-      style={{ background: 'radial-gradient(ellipse, #1e3a8a 0%, #1a0a5e 100%)' }}
-    >
-      <div
-        className="text-5xl font-black text-game-yellow text-center"
-        style={{ textShadow: '0 0 20px rgba(255,204,0,0.5)' }}
-      >
-        GRILLE PARTY
-      </div>
-      <div className="text-blue-300 text-xl text-center">
-        Rejoindre la salle{' '}
-        <span className="text-white font-black tracking-widest">{roomCode}</span>
-      </div>
+    <div className="game-screen flex flex-col items-center justify-center gap-6 p-6">
+      <div className="game-content flex w-full max-w-sm flex-col items-center gap-6">
+        <GameLogo size="sm" />
+        <div className="cartoon-card w-full p-5 text-center">
+          <div className="text-sm font-black uppercase text-game-purple">Rejoindre la salle</div>
+          <div className="cartoon-title-sm mt-1 font-display text-5xl text-game-yellow">{roomCode}</div>
+        </div>
 
-      <div className="w-full max-w-sm flex flex-col gap-4">
         <input
           type="text"
           value={name}
@@ -90,13 +91,13 @@ export default function JoinPage() {
           placeholder="Ton pseudo…"
           autoFocus
           maxLength={20}
-          className="bg-game-blue border-4 border-blue-500 rounded-2xl px-5 py-4
-                     text-white text-2xl font-black placeholder-blue-400 outline-none
-                     focus:border-game-yellow transition-colors w-full text-center"
+          className="w-full rounded-[24px] border-4 border-game-purple bg-white px-5 py-4
+                     text-center text-2xl font-black text-game-purple placeholder-game-purple/45
+                     shadow-cartoon outline-none transition-colors focus:bg-game-lilac"
         />
 
         {error && (
-          <div className="bg-red-600 rounded-2xl px-4 py-3 text-center font-bold">
+          <div className="status-pill w-full bg-game-red px-4 py-3 text-center text-white">
             {error}
           </div>
         )}
@@ -104,9 +105,9 @@ export default function JoinPage() {
         <button
           onClick={join}
           disabled={joining || !name.trim()}
-          className="btn-primary text-2xl py-4 disabled:opacity-50"
+          className="btn-primary w-full py-4 text-2xl disabled:opacity-50"
         >
-          {joining ? '...' : '🎮 Rejoindre'}
+          {joining ? '...' : 'Rejoindre'}
         </button>
       </div>
     </div>

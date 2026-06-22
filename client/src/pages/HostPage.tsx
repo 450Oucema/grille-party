@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
+import GameLogo from '../components/GameLogo'
 
 export default function HostPage() {
   const navigate = useNavigate()
@@ -24,74 +25,42 @@ export default function HostPage() {
   }
 
   return (
-    <div
-      className="w-screen h-screen flex flex-col items-center justify-center gap-10"
-      style={{
-        background: 'radial-gradient(ellipse at center, #1e3a8a 0%, #1a0a5e 60%, #0a0030 100%)',
-      }}
-    >
+    <div className="game-screen flex flex-col items-center justify-center gap-10 p-6">
       {/* Stars background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 40 }).map((_, i) => (
+        {Array.from({ length: 28 }).map((_, i) => (
           <div
             key={i}
-            className="absolute rounded-full bg-white opacity-60"
+            className="absolute rounded-full border-2 border-game-purple opacity-70"
             style={{
-              width: Math.random() * 3 + 1,
-              height: Math.random() * 3 + 1,
+              width: Math.random() * 12 + 6,
+              height: Math.random() * 12 + 6,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animation: `pulse ${2 + Math.random() * 3}s ease-in-out infinite`,
+              background: ['#FFD94A', '#FF4DB8', '#39E5B7', '#E9D6FF'][i % 4],
+              animation: `bounceSoft ${2 + Math.random() * 3}s ease-in-out infinite`,
               animationDelay: `${Math.random() * 3}s`,
             }}
           />
         ))}
       </div>
 
-      <div className="relative flex flex-col items-center gap-6">
-        {/* Title */}
-        <div
-          className="text-8xl font-black text-center"
-          style={{
-            background: 'linear-gradient(180deg, #ffdd44 0%, #ff8800 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            textShadow: 'none',
-            filter: 'drop-shadow(0 4px 8px rgba(255,150,0,0.5))',
-          }}
-        >
-          GRILLE
-        </div>
-        <div
-          className="text-8xl font-black text-center -mt-8"
-          style={{
-            background: 'linear-gradient(180deg, #44aaff 0%, #0044ff 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            filter: 'drop-shadow(0 4px 8px rgba(0,100,255,0.5))',
-          }}
-        >
-          PARTY
-        </div>
-
-        {/* Subtitle */}
-        <div className="text-blue-300 text-xl font-bold text-center">
-          Le jeu de mots pour toute la famille !
-        </div>
+      <div className="game-content flex flex-col items-center gap-8">
+        <GameLogo size="lg" subtitle="Le jeu de mots pour toute la famille" />
 
         {/* Grid preview decoration */}
-        <div className="flex gap-2 my-2">
+        <div className="cartoon-card flex gap-3 p-4">
           {['G', 'R', 'I', 'L', 'L', 'E'].map((l, i) => (
-            <div key={i} className="cell-tile w-14 h-14 text-2xl">{l}</div>
+            <div key={i} className="cell-tile h-16 w-16 text-4xl">{l}</div>
           ))}
         </div>
 
         <button
           onClick={createRoom}
           disabled={loading}
-          className="btn-primary text-3xl py-5 px-16 mt-4"
+          className="btn-primary mt-2 px-16 py-5 text-3xl"
         >
-          {loading ? '...' : '🎮 Créer une partie'}
+          {loading ? '...' : 'Créer une partie'}
         </button>
       </div>
     </div>

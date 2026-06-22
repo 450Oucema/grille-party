@@ -14,27 +14,24 @@ export default function ResultsTable({ results, myPlayerId }: Props) {
       {results.map((r, i) => (
         <div
           key={r.playerId}
-          className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${
+          className={`flex items-center gap-4 rounded-[24px] border-4 border-game-purple p-4 shadow-cartoon ${
             r.playerId === myPlayerId
-              ? 'bg-game-yellow/20 border-game-yellow'
-              : 'bg-game-blue border-blue-600'
+              ? 'bg-game-yellow'
+              : 'bg-white'
           }`}
         >
-          <div className="text-3xl w-10 text-center">
+          <div className="w-10 text-center text-3xl">
             {MEDALS[i] ?? <span className="text-gray-400">{i + 1}</span>}
           </div>
-          <div className="text-3xl">{AVATARS[r.avatar % AVATARS.length]}</div>
+          <div className="avatar-token h-12 w-12 text-3xl">{AVATARS[r.avatar % AVATARS.length]}</div>
           <div className="flex-1 min-w-0">
-            <div className="font-black text-xl truncate">{r.playerName}</div>
-            <div className="text-blue-300 text-sm">
+            <div className="truncate text-xl font-black text-game-purple">{r.playerName}</div>
+            <div className="text-sm font-extrabold text-game-blue">
               {r.wordCount} mot{r.wordCount !== 1 ? 's' : ''} valide{r.wordCount !== 1 ? 's' : ''}
               {r.bestWord && <span> · meilleur : <span className="text-game-yellow font-black">{r.bestWord}</span></span>}
             </div>
           </div>
-          <div
-            className="font-black text-3xl text-game-yellow"
-            style={{ textShadow: '0 0 10px rgba(255,204,0,0.6)' }}
-          >
+          <div className="font-display text-4xl font-extrabold text-game-magenta">
             {r.totalScore}
           </div>
         </div>

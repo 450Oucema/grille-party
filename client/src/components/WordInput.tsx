@@ -55,15 +55,15 @@ export default function WordInput({ onSubmit, lastFeedback, disabled }: Props) {
           autoCorrect="off"
           autoComplete="off"
           spellCheck={false}
-          className="flex-1 bg-game-blue border-4 border-blue-500 rounded-2xl px-5 py-4
-                     text-white text-2xl font-black placeholder-blue-400 outline-none
-                     focus:border-game-yellow transition-colors uppercase
+          className="min-w-0 flex-1 rounded-[22px] border-4 border-game-purple bg-white px-5 py-4
+                     text-center text-2xl font-black uppercase text-game-purple placeholder-game-purple/45 outline-none
+                     shadow-cartoon-sm transition-colors focus:bg-game-lilac
                      disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={handleSubmit}
           disabled={disabled || value.trim().length < 2}
-          className="btn-primary text-2xl px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary px-6 text-2xl disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ✓
         </button>
@@ -71,12 +71,12 @@ export default function WordInput({ onSubmit, lastFeedback, disabled }: Props) {
 
       {lastFeedback && (
         <div
-          className={`text-center py-2 px-4 rounded-full text-lg font-black animate-bounce-in ${
+          className={`status-pill animate-bounce-in px-4 py-2 text-center text-lg ${
             lastFeedback.status === 'accepted'
-              ? 'bg-green-600'
+              ? 'bg-game-green text-game-purple'
               : lastFeedback.status === 'duplicate'
-              ? 'bg-gray-600'
-              : 'bg-red-600'
+              ? 'bg-game-orange text-game-purple'
+              : 'bg-game-red text-white'
           }`}
         >
           {lastFeedback.status === 'accepted' && `✓ ${lastFeedback.word}`}

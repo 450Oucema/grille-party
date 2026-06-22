@@ -14,22 +14,18 @@ export default function QRJoin({ roomCode }: Props) {
   const url = getJoinUrl(roomCode)
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div
-        className="bg-white p-4 rounded-3xl"
-        style={{ boxShadow: '0 0 30px rgba(255,204,0,0.4)' }}
-      >
-        <QRCodeSVG value={url} size={180} />
+    <div className="cartoon-card flex flex-col items-center gap-4 p-5">
+      <div className="rounded-[22px] border-[3px] border-game-purple bg-white p-4 shadow-cartoon-sm">
+        <QRCodeSVG value={url} size={190} fgColor="#28104B" />
       </div>
       <div className="text-center">
-        <div className="text-blue-300 text-sm mb-1">Rejoindre :</div>
-        <div
-          className="font-black text-5xl text-game-yellow tracking-widest"
-          style={{ textShadow: '0 0 15px rgba(255,204,0,0.6)' }}
-        >
+        <div className="mb-1 text-sm font-black uppercase text-game-purple">Code de partie</div>
+        <div className="cartoon-title-sm font-display text-6xl text-game-yellow">
           {roomCode}
         </div>
-        <div className="text-blue-300 text-xs mt-1 break-all">{url}</div>
+        <div className="mt-2 max-w-[260px] break-all rounded-2xl bg-game-lilac px-3 py-2 text-xs font-extrabold text-game-purple">
+          {url}
+        </div>
       </div>
     </div>
   )
