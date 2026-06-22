@@ -27,15 +27,25 @@
     box-sizing: border-box;
   }
 
+  html {
+    min-height: 100%;
+    background: #39C1FF;
+  }
+
   body {
     @apply bg-game-bg text-game-ink font-game m-0 p-0;
+    min-height: 100vh;
+    min-height: 100dvh;
     background:
       radial-gradient(circle at 14% 7%, rgba(255,255,255,.38) 0 11%, transparent 12%),
       linear-gradient(180deg, #35BFFF 0%, #65CFFF 48%, #7B77FF 100%);
+    overscroll-behavior: none;
   }
 
   #root {
-    @apply w-screen h-screen;
+    @apply w-screen;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   button, input {
@@ -46,6 +56,7 @@
 @layer components {
   .game-screen {
     @apply relative min-h-screen w-screen overflow-x-hidden text-game-ink;
+    min-height: 100dvh;
     background:
       radial-gradient(circle at 18% 8%, rgba(255,255,255,.42) 0 10%, transparent 11%),
       linear-gradient(180deg, #39C1FF 0%, #65D9FF 48%, #8175FF 100%);

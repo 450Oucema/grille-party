@@ -1,7 +1,12 @@
 import { QRCodeSVG } from 'qrcode.react'
+import { useState } from 'react'
 
 type Props = {
   roomCode: string
+}
+
+type ShareNavigator = Navigator & {
+  canShare?: (data?: ShareData) => boolean
 }
 
 function getJoinUrl(roomCode: string): string {
@@ -12,6 +17,49 @@ function getJoinUrl(roomCode: string): string {
 
 export default function QRJoin({ roomCode }: Props) {
   const url = getJoinUrl(roomCode)
+  const [copied, setCopied] = useState(false)
+  const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+  const copyJoinUrl = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = url
+        textarea.setAttribute('readonly', '')
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+      }
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch (err) {
+      console.error('Impossible de copier le lien', err)
+    }
+  }
+
+  const shareJoinUrl = async () => {
+    const shareData: ShareData = {
+      title: 'Grille Party',
+      text: `Rejoins ma partie Grille Party : ${roomCode}`,
+      url,
+    }
+    const shareNavigator = navigator as ShareNavigator
+    try {
+      if (shareNavigator.canShare && !shareNavigator.canShare(shareData)) {
+        await copyJoinUrl()
+        return
+      }
+      await navigator.share(shareData)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      console.error('Impossible de partager le lien', err)
+    }
+  }
 
   return (
     <div className="cartoon-card flex flex-col items-center gap-4 p-5">
@@ -26,6 +74,24 @@ export default function QRJoin({ roomCode }: Props) {
         <div className="mt-2 max-w-[260px] break-all rounded-2xl bg-game-lilac px-3 py-2 text-xs font-extrabold text-game-purple">
           {url}
         </div>
+      </div>
+      <div className="grid w-full max-w-[260px] grid-cols-1 gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={copyJoinUrl}
+          className="btn-secondary px-3 py-2 text-sm"
+        >
+          {copied ? 'Copié !' : 'Copier'}
+        </button>
+        {canNativeShare && (
+          <button
+            type="button"
+            onClick={shareJoinUrl}
+            className="btn-primary px-3 py-2 text-sm"
+          >
+            Partager
+          </button>
+        )}
       </div>
     </div>
   )

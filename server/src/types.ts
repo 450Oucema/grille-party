@@ -1,4 +1,5 @@
 export type RoomPhase = 'lobby' | 'playing' | 'results'
+export type ScoreMode = 'classic' | 'rareLetters'
 
 export type GridCell = {
   letter: string // may be "QU"
@@ -27,6 +28,7 @@ export type Room = {
   endsAt?: number
   durationSec: number
   gridSize: number  // 4 or 6
+  scoreMode: ScoreMode
   lastResults?: PlayerResult[]
 }
 
@@ -64,6 +66,7 @@ export type PublicRoom = {
   grid?: GridCell[][]
   gridSize: number
   durationSec: number
+  scoreMode: ScoreMode
 }
 
 export type PrivatePlayerState = {

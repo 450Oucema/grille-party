@@ -112,11 +112,11 @@ io.on('connection', (socket) => {
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 
-  socket.on('room:settings', ({ roomCode, gridSize, durationSec, hostToken }: { roomCode: string; gridSize?: number; durationSec?: number; hostToken?: string }) => {
+  socket.on('room:settings', ({ roomCode, gridSize, durationSec, scoreMode, hostToken }: { roomCode: string; gridSize?: number; durationSec?: number; scoreMode?: 'classic' | 'rareLetters'; hostToken?: string }) => {
     const room = getRoom(roomCode)
     if (!room || !isRoomHost(room, socket.id, hostToken) || room.phase !== 'lobby') return
     room.hostSocketId = socket.id
-    updateRoomSettings(room, { gridSize, durationSec })
+    updateRoomSettings(room, { gridSize, durationSec, scoreMode })
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 

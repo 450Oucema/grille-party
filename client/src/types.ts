@@ -1,4 +1,5 @@
 export type RoomPhase = 'lobby' | 'playing' | 'results'
+export type ScoreMode = 'classic' | 'rareLetters'
 
 export type GridCell = {
   letter: string
@@ -22,6 +23,7 @@ export type PublicRoom = {
   grid?: GridCell[][]
   gridSize: number
   durationSec: number
+  scoreMode: ScoreMode
 }
 
 export type WordResult = {

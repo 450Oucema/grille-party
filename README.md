@@ -99,6 +99,10 @@ VITE_SOCKET_PATH=/g/grille-party/socket.io
 
 ### Scoring
 
+Deux modes sont configurables par l'hôte.
+
+#### Classique
+
 | Longueur | Points |
 |----------|--------|
 | 3 lettres | 3 pts |
@@ -109,7 +113,23 @@ VITE_SOCKET_PATH=/g/grille-party/socket.io
 
 > **Formule :** `3 + max(0, longueur - 3)`
 
-- Si un mot est trouvé par **2 joueurs ou plus** → **0 point** pour tout le monde sur ce mot
+#### Lettres rares
+
+Le score de base est la somme des lettres selon le barème Scrabble français :
+
+- 1 pt : A E I L N O R S T U
+- 2 pts : D G M
+- 3 pts : B C P
+- 4 pts : F H V
+- 8 pts : J Q
+- 10 pts : K W X Y Z
+
+La case **Qu** compte comme `Q + U`.
+
+#### Bonus commun aux modes
+
+- Si un mot est trouvé par un seul joueur → **+1 point** bonus
+- Si un mot est trouvé par **2 joueurs ou plus** → score de base conservé, mais pas de bonus unique
 - Un joueur ne peut pas soumettre deux fois le même mot
 
 ### Durée
@@ -186,18 +206,18 @@ boggle-party/
 | Événement | Payload | Description |
 |-----------|---------|-------------|
 | `room:create` | — | Crée une nouvelle salle |
-| `room:sync` | `{ roomCode, playerId? }` | Demande l'état courant (reconnexion) |
+| `room:sync` | `{ roomCode, playerId?, hostToken? }` | Demande l'état courant (reconnexion) |
 | `room:join` | `{ roomCode, playerName }` | Rejoindre une salle |
-| `room:settings` | `{ roomCode, gridSize?, durationSec? }` | Modifier les paramètres (hôte) |
-| `room:start` | `{ roomCode }` | Lancer la partie (hôte) |
-| `room:restart` | — | Revenir en lobby (hôte) |
+| `room:settings` | `{ roomCode, gridSize?, durationSec?, scoreMode?, hostToken? }` | Modifier les paramètres (hôte) |
+| `room:start` | `{ roomCode, hostToken? }` | Lancer la partie (hôte) |
+| `room:restart` | `{ roomCode?, hostToken? }` | Revenir en lobby (hôte) |
 | `word:submit` | `{ roomCode, playerId, word }` | Soumettre un mot |
 
 ### Serveur → Client
 
 | Événement             | Payload            | Description                         |
 |-----------------------|--------------------|-------------------------------------|
-| `room:created`        | `{ roomCode }`     | Salle créée                         |
+| `room:created`        | `{ roomCode, hostToken }` | Salle créée                  |
 | `room:state`          | `PublicRoom`       | État complet de la salle            |
 | `player:state`        | `{ id, words[] }`  | État privé du joueur                |
 | `game:started`        | `{ grid, endsAt }` | Partie lancée                       |

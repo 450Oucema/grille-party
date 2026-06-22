@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { socket } from '../socket'
-import type { PublicRoom, PlayerResult } from '../types'
+import type { PublicRoom, PlayerResult, ScoreMode } from '../types'
 import QRJoin from '../components/QRJoin'
 import Board from '../components/Board'
 import DraggableBoard from '../components/DraggableBoard'
@@ -117,7 +117,23 @@ export default function RoomPage() {
   }
 
   const handleSettings = (gridSize: number, durationSec: number) => {
-    emitWhenConnected('room:settings', { roomCode, gridSize, durationSec, hostToken: hostToken ?? undefined })
+    emitWhenConnected('room:settings', {
+      roomCode,
+      gridSize,
+      durationSec,
+      scoreMode: room?.scoreMode ?? 'classic',
+      hostToken: hostToken ?? undefined,
+    })
+  }
+
+  const handleScoreMode = (scoreMode: ScoreMode) => {
+    emitWhenConnected('room:settings', {
+      roomCode,
+      gridSize: room?.gridSize ?? 6,
+      durationSec: room?.durationSec ?? 180,
+      scoreMode,
+      hostToken: hostToken ?? undefined,
+    })
   }
 
   const handleRestart = () => {
@@ -271,6 +287,27 @@ export default function RoomPage() {
                   ))}
                 </div>
               </div>
+              <div className="flex flex-col gap-2">
+                <div className="text-sm font-black uppercase text-game-purple">Score</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Classique', mode: 'classic' as const },
+                    { label: 'Lettres rares', mode: 'rareLetters' as const },
+                  ].map(({ label, mode }) => (
+                    <button
+                      key={mode}
+                      onClick={() => handleScoreMode(mode)}
+                      className={`segmented-option flex-1 text-sm ${
+                        (room?.scoreMode ?? 'classic') === mode
+                          ? 'segmented-option-selected text-game-purple'
+                          : 'text-game-purple'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {isHost && (
@@ -361,7 +398,11 @@ export default function RoomPage() {
             </div>
             <div className="cartoon-card p-5">
               <div className="text-sm font-black uppercase text-game-purple">Mission</div>
-              <div className="mt-2 text-xl font-black text-game-blue">Trouvez le plus de mots uniques.</div>
+              <div className="mt-2 text-xl font-black text-game-blue">
+                {(room.scoreMode ?? 'classic') === 'rareLetters'
+                  ? 'Les lettres rares rapportent gros.'
+                  : 'Trouvez le plus de mots uniques.'}
+              </div>
               <div className="mt-4 h-5 rounded-full border-[3px] border-game-purple bg-white p-0.5">
                 <div className="h-full animate-progress-fill rounded-full bg-game-magenta" />
               </div>

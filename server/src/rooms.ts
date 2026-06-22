@@ -24,6 +24,7 @@ export function createRoom(): Room {
     players: new Map(),
     durationSec: 180,
     gridSize: 6,
+    scoreMode: 'classic',
   }
   rooms.set(code, room)
   return room
@@ -70,12 +71,15 @@ export function getRoomBySocket(socketId: string): Room | undefined {
   return undefined
 }
 
-export function updateRoomSettings(room: Room, settings: { gridSize?: number; durationSec?: number }): void {
+export function updateRoomSettings(room: Room, settings: { gridSize?: number; durationSec?: number; scoreMode?: Room['scoreMode'] }): void {
   if (settings.gridSize && [4, 6].includes(settings.gridSize)) {
     room.gridSize = settings.gridSize
   }
   if (settings.durationSec && settings.durationSec >= 60 && settings.durationSec <= 300) {
     room.durationSec = settings.durationSec
+  }
+  if (settings.scoreMode && ['classic', 'rareLetters'].includes(settings.scoreMode)) {
+    room.scoreMode = settings.scoreMode
   }
 }
 
@@ -98,6 +102,7 @@ export function toPublicRoom(room: Room): PublicRoom {
     grid: room.grid,
     gridSize: room.gridSize,
     durationSec: room.durationSec,
+    scoreMode: room.scoreMode,
   }
 }
 

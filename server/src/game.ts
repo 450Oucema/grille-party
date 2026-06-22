@@ -30,7 +30,7 @@ export function endGame(io: Server, room: Room): void {
   if (room.phase !== 'playing') return
   room.phase = 'results'
 
-  const results = computeResults(room.players, room.grid!)
+  const results = computeResults(room.players, room.grid!, room.scoreMode)
   room.lastResults = results
 
   io.to(room.code).emit('game:ended', { results })
