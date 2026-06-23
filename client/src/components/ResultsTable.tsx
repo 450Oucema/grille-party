@@ -1,5 +1,5 @@
 import type { PlayerResult } from '../types'
-import { AVATARS } from '../types'
+import AvatarToken from './AvatarToken'
 
 type Props = {
   results: PlayerResult[]
@@ -23,7 +23,7 @@ export default function ResultsTable({ results, myPlayerId }: Props) {
           <div className="w-10 text-center text-3xl">
             {MEDALS[i] ?? <span className="text-gray-400">{i + 1}</span>}
           </div>
-          <div className="avatar-token h-12 w-12 text-3xl">{AVATARS[r.avatar % AVATARS.length]}</div>
+          <AvatarToken avatar={r.avatar} className="h-12 w-12" />
           <div className="flex-1 min-w-0">
             <div className="truncate text-xl font-black text-game-purple">{r.playerName}</div>
             <div className="text-sm font-extrabold text-game-blue">

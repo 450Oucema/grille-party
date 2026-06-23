@@ -52,5 +52,3 @@ export type PlayerResult = {
   words: WordResult[]
   bestWord: string | null
 }
-
-export const AVATARS = ['🐙', '⭐', '🌊', '🎮', '🦄', '🐸', '🌈', '🎪']

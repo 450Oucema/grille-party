@@ -47,15 +47,7 @@ export default function HostPage() {
       </div>
 
       <div className="game-content flex w-full max-w-5xl flex-col items-center gap-6 py-6 sm:gap-8">
-        <GameLogo size="md" subtitle="Le jeu de mots pour toute la famille" />
-
-        {/* Grid preview decoration */}
-        <div className="cartoon-card flex max-w-full gap-2 overflow-hidden p-3 sm:gap-3 sm:p-4">
-          {['G', 'R', 'I', 'L', 'L', 'E'].map((l, i) => (
-            <div key={i} className="cell-tile h-11 w-11 text-2xl sm:h-16 sm:w-16 sm:text-4xl">{l}</div>
-          ))}
-        </div>
-
+        <GameLogo size="md" />
         <button
           onClick={createRoom}
           disabled={loading}

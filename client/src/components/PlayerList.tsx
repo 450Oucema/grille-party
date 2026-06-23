@@ -1,5 +1,5 @@
 import type { PublicPlayer } from '../types'
-import { AVATARS } from '../types'
+import AvatarToken from './AvatarToken'
 
 type Props = {
   players: PublicPlayer[]
@@ -18,7 +18,7 @@ export default function PlayerList({ players, showWordCount = false }: Props) {
               : 'border-game-purple bg-game-lilac opacity-60'
           }`}
         >
-          <div className="avatar-token h-12 w-12 text-2xl">{AVATARS[p.avatar % AVATARS.length]}</div>
+          <AvatarToken avatar={p.avatar} className="h-12 w-12" />
           <div className="flex-1 min-w-0">
             <div className="truncate text-lg font-black text-game-purple">{p.name}</div>
             {showWordCount && (

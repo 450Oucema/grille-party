@@ -87,7 +87,7 @@ io.on('connection', (socket) => {
     socket.emit('room:state', toPublicRoom(room))
   })
 
-  socket.on('room:join', ({ roomCode, playerName }: { roomCode: string; playerName: string }) => {
+  socket.on('room:join', ({ roomCode, playerName, avatar }: { roomCode: string; playerName: string; avatar?: number }) => {
     const room = getRoom(roomCode)
     if (!room) {
       socket.emit('error', { message: 'Salle introuvable.' })
@@ -106,7 +106,7 @@ io.on('connection', (socket) => {
       return
     }
 
-    const player = addPlayer(room, socket.id, playerName)
+    const player = addPlayer(room, socket.id, playerName, avatar)
     socket.join(room.code)
     socket.emit('player:state', { id: player.id, words: [] })
     io.to(room.code).emit('room:state', toPublicRoom(room))
@@ -195,6 +195,22 @@ io.on('connection', (socket) => {
     socket.emit('word:accepted-local', { word: norm })
 
     // Update word count for all
+    io.to(room.code).emit('room:state', toPublicRoom(room))
+  })
+
+  socket.on('player:avatar', ({ roomCode, playerId, avatar }: { roomCode: string; playerId: string; avatar: number }) => {
+    const room = getRoom(roomCode)
+    if (!room) {
+      socket.emit('error', { message: 'Salle introuvable.' })
+      return
+    }
+    const player = room.players.get(playerId)
+    if (!player || player.socketId !== socket.id) {
+      socket.emit('error', { message: 'Joueur invalide.' })
+      return
+    }
+    if (!Number.isInteger(avatar) || avatar < 0 || avatar > 7) return
+    player.avatar = avatar
     io.to(room.code).emit('room:state', toPublicRoom(room))
   })
 

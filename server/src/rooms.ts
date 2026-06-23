@@ -36,9 +36,11 @@ export function getRoom(code: string): Room | undefined {
   return rooms.get(code.toUpperCase())
 }
 
-export function addPlayer(room: Room, socketId: string, name: string): Player {
+export function addPlayer(room: Room, socketId: string, name: string, avatarChoice?: number): Player {
   const id = `p${Date.now()}${Math.random().toString(36).slice(2, 5)}`
-  const avatar = room.players.size % 8
+  const avatar = Number.isInteger(avatarChoice) && avatarChoice! >= 0 && avatarChoice! < 8
+    ? avatarChoice!
+    : room.players.size % 8
   const color = PLAYER_COLORS[room.players.size % PLAYER_COLORS.length]
   const player: Player = {
     id,

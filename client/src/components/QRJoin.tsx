@@ -71,9 +71,6 @@ export default function QRJoin({ roomCode }: Props) {
         <div className="cartoon-title-sm font-display text-6xl text-game-yellow">
           {roomCode}
         </div>
-        <div className="mt-2 max-w-[260px] break-all rounded-2xl bg-game-lilac px-3 py-2 text-xs font-extrabold text-game-purple">
-          {url}
-        </div>
       </div>
       <div className="grid w-full max-w-[260px] grid-cols-1 gap-2 sm:grid-cols-2">
         <button

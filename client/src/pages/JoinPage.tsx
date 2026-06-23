@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
+import AvatarPicker from '../components/AvatarPicker'
+import AvatarToken from '../components/AvatarToken'
 import GameLogo from '../components/GameLogo'
 
 export default function JoinPage() {
@@ -10,6 +12,7 @@ export default function JoinPage() {
   const [error, setError] = useState('')
   const [joining, setJoining] = useState(false)
   const [playerId, setPlayerId] = useState<string | null>(null)
+  const [avatar, setAvatar] = useState(0)
 
   useEffect(() => {
     socket.connect()
@@ -46,7 +49,14 @@ export default function JoinPage() {
     if (!name.trim()) return
     setJoining(true)
     setError('')
-    socket.emit('room:join', { roomCode: roomCode?.toUpperCase(), playerName: name.trim() })
+    socket.emit('room:join', { roomCode: roomCode?.toUpperCase(), playerName: name.trim(), avatar })
+  }
+
+  const changeAvatar = (nextAvatar: number) => {
+    setAvatar(nextAvatar)
+    if (roomCode && playerId) {
+      socket.emit('player:avatar', { roomCode: roomCode.toUpperCase(), playerId, avatar: nextAvatar })
+    }
   }
 
   if (playerId) {
@@ -56,12 +66,16 @@ export default function JoinPage() {
           <GameLogo size="sm" />
           <div className="relative h-28 w-28">
             <div className="absolute inset-0 animate-orbit rounded-full border-4 border-dashed border-game-purple" />
-            <div className="avatar-token absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 text-3xl">A</div>
+            <AvatarToken avatar={avatar} className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2" />
           </div>
           <div className="cartoon-card w-full p-6 text-center">
             <div className="text-3xl font-black text-game-purple">En attente du lancement...</div>
             <div className="mt-3 text-xl font-extrabold text-game-blue">
               Code : <span className="cartoon-title-sm text-game-yellow">{roomCode}</span>
+            </div>
+            <div className="mt-5 text-left">
+              <div className="mb-2 text-xs font-black uppercase text-game-purple">Avatar</div>
+              <AvatarPicker value={avatar} onChange={changeAvatar} compact />
             </div>
           </div>
           <div className="cartoon-panel w-full p-4">
@@ -96,6 +110,11 @@ export default function JoinPage() {
                      text-center text-2xl font-black text-game-purple placeholder-game-purple/45
                      shadow-cartoon outline-none transition-colors focus:bg-game-lilac"
         />
+
+        <div className="cartoon-panel w-full p-3">
+          <div className="mb-2 text-xs font-black uppercase text-game-purple">Avatar</div>
+          <AvatarPicker value={avatar} onChange={setAvatar} compact />
+        </div>
 
         {error && (
           <div className="status-pill w-full bg-game-red px-4 py-3 text-center text-white">

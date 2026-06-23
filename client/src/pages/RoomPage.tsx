@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { socket } from '../socket'
 import type { PublicPlayer, PublicRoom, PlayerResult, ScoreMode } from '../types'
-import { AVATARS } from '../types'
+import AvatarPicker from '../components/AvatarPicker'
+import AvatarToken from '../components/AvatarToken'
 import QRJoin from '../components/QRJoin'
 import Board from '../components/Board'
 import DraggableBoard from '../components/DraggableBoard'
@@ -31,9 +32,7 @@ function PlayingScoreCards({ players }: { players: PublicPlayer[] }) {
           style={{ background: p.color }}
         >
           <div className="flex min-w-0 items-center gap-2">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-[3px] border-game-purple bg-white text-2xl shadow-cartoon-sm">
-              {AVATARS[p.avatar % AVATARS.length]}
-            </span>
+            <AvatarToken avatar={p.avatar} className="h-10 w-10 rounded-xl" />
             <span className="truncate text-base font-black text-game-purple">{p.name}</span>
           </div>
           <span className="font-display text-3xl font-extrabold leading-none text-game-purple">
@@ -41,6 +40,36 @@ function PlayingScoreCards({ players }: { players: PublicPlayer[] }) {
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+function MobilePlayerWordCounts({ players }: { players: PublicPlayer[] }) {
+  const sortedPlayers = [...players].sort((a, b) => b.wordCount - a.wordCount)
+
+  return (
+    <div className="mx-3 mb-3 mt-2 flex-1 overflow-auto rounded-[24px] border-4 border-game-purple bg-white/90 px-3 pb-3 pt-3 shadow-cartoon">
+      <div className="mb-2 text-xs font-black uppercase text-game-purple">
+        Joueurs
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        {sortedPlayers.map((p) => (
+          <div
+            key={p.id}
+            className={`flex items-center justify-between gap-3 rounded-2xl border-[3px] border-game-purple px-3 py-2 shadow-cartoon-sm ${
+              p.connected ? 'bg-white' : 'bg-game-lilac opacity-60'
+            }`}
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <AvatarToken avatar={p.avatar} className="h-10 w-10 rounded-xl" />
+              <span className="truncate text-base font-black text-game-purple">{p.name}</span>
+            </div>
+            <span className="status-pill shrink-0 bg-game-yellow px-3 py-1 text-sm text-game-purple">
+              {p.wordCount} mot{p.wordCount > 1 ? 's' : ''}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -56,10 +85,10 @@ export default function RoomPage() {
   const [playerId, setPlayerId] = useState<string | null>(initialPlayerId)
   const [hostView, setHostView] = useState<'host' | 'player'>('host')
   const [hostPlayerName, setHostPlayerName] = useState('')
+  const [hostPlayerAvatar, setHostPlayerAvatar] = useState(0)
   const [room, setRoom] = useState<PublicRoom | null>(null)
   const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
-  const [myWords, setMyWords] = useState<string[]>([])
 
   const isHost = !!hostToken
   const currentPlayer = room?.players.find(p => p.id === playerId)
@@ -80,9 +109,8 @@ export default function RoomPage() {
 
     socket.on('room:state', (r: PublicRoom) => setRoom(r))
 
-    socket.on('player:state', ({ id, words }: { id: string; words: string[] }) => {
+    socket.on('player:state', ({ id }: { id: string; words: string[] }) => {
       setPlayerId(id)
-      setMyWords(words)
       if (roomCode) {
         sessionStorage.setItem(`playerId:${roomCode}`, id)
         sessionStorage.setItem('roomCode', roomCode)
@@ -92,7 +120,6 @@ export default function RoomPage() {
 
     socket.on('game:started', () => {
       setResults(null)
-      setMyWords([])
     })
 
     socket.on('game:ended', ({ results: r }: { results: PlayerResult[] }) => {
@@ -100,7 +127,6 @@ export default function RoomPage() {
     })
 
     socket.on('word:accepted-local', ({ word }: { word: string }) => {
-      setMyWords(prev => [word, ...prev])
       setFeedback({ word, status: 'accepted' })
     })
 
@@ -159,7 +185,7 @@ export default function RoomPage() {
     emitWhenConnected('room:settings', {
       roomCode,
       gridSize: room?.gridSize ?? 6,
-      durationSec: room?.durationSec ?? 180,
+      durationSec: room?.durationSec ?? 120,
       scoreMode,
       hostToken: hostToken ?? undefined,
     })
@@ -168,7 +194,6 @@ export default function RoomPage() {
   const handleRestart = () => {
     emitWhenConnected('room:restart', { roomCode, hostToken: hostToken ?? undefined })
     setResults(null)
-    setMyWords([])
   }
 
   const handleWordSubmit = useCallback((word: string) => {
@@ -178,7 +203,15 @@ export default function RoomPage() {
   const handleHostJoinAsPlayer = () => {
     const playerName = hostPlayerName.trim()
     if (!roomCode || !playerName) return
-    emitWhenConnected('room:join', { roomCode, playerName })
+    emitWhenConnected('room:join', { roomCode, playerName, avatar: hostPlayerAvatar })
+  }
+
+  const handleAvatarChange = (avatar: number) => {
+    if (!roomCode || !playerId) {
+      setHostPlayerAvatar(avatar)
+      return
+    }
+    emitWhenConnected('player:avatar', { roomCode, playerId, avatar })
   }
 
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
@@ -226,17 +259,7 @@ export default function RoomPage() {
               />
             </div>
 
-            {/* Word list */}
-            <div className="mx-3 mb-3 mt-2 flex-1 overflow-auto rounded-[24px] border-4 border-game-purple bg-white/90 px-4 pb-4 pt-3 shadow-cartoon">
-              <div className="mb-2 text-xs font-black uppercase text-game-purple">
-                Mes mots ({myWords.length})
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {myWords.map((w, i) => (
-                  <span key={i} className="word-accepted text-sm">{w}</span>
-                ))}
-              </div>
-            </div>
+            <MobilePlayerWordCounts players={room.players} />
           </div>
         )}
 
@@ -249,6 +272,12 @@ export default function RoomPage() {
               <div className="mt-2 font-extrabold text-game-blue">
                 {isHost ? 'Tu peux revenir au salon pour lancer la partie' : "L'hôte prépare la grille"}
               </div>
+              {currentPlayer && (
+                <div className="mt-5 text-left">
+                  <div className="mb-2 text-xs font-black uppercase text-game-purple">Avatar</div>
+                  <AvatarPicker value={currentPlayer.avatar} onChange={handleAvatarChange} compact />
+                </div>
+              )}
             </div>
             <div className="cartoon-panel w-full max-w-sm p-4">
               <div className="text-sm font-black uppercase text-game-magenta">Astuce</div>
@@ -286,7 +315,7 @@ export default function RoomPage() {
                   {[4, 6].map(s => (
                     <button
                       key={s}
-                      onClick={() => handleSettings(s, room?.durationSec ?? 180)}
+                      onClick={() => handleSettings(s, room?.durationSec ?? 120)}
                       className={`segmented-option flex-1 text-lg ${
                         (room?.gridSize ?? 6) === s
                           ? 'segmented-option-selected text-game-purple'
@@ -301,12 +330,12 @@ export default function RoomPage() {
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-black uppercase text-game-purple">Durée</div>
                 <div className="grid grid-cols-3 gap-2">
-                  {[{label:'2 min', s:120},{label:'3 min', s:180},{label:'5 min', s:300}].map(({label, s}) => (
+                  {[{label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
                     <button
                       key={s}
                       onClick={() => handleSettings(room?.gridSize ?? 6, s)}
                       className={`segmented-option flex-1 text-sm ${
-                        (room?.durationSec ?? 180) === s
+                        (room?.durationSec ?? 120) === s
                           ? 'segmented-option-selected text-game-purple'
                           : 'text-game-purple'
                       }`}
@@ -342,18 +371,15 @@ export default function RoomPage() {
             {isHost && (
               <div className="cartoon-card p-4">
                 {currentPlayer ? (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="avatar-token h-12 w-12 text-2xl">A</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
-                      <div className="truncate text-lg font-black text-game-blue">{currentPlayer.name}</div>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <AvatarToken avatar={currentPlayer.avatar} className="h-14 w-14" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
+                        <div className="truncate text-lg font-black text-game-blue">{currentPlayer.name}</div>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setHostView('player')}
-                      className="btn-secondary px-4 py-2 text-base"
-                    >
-                      Jouer
-                    </button>
+                    <AvatarPicker value={currentPlayer.avatar} onChange={handleAvatarChange} compact />
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
@@ -361,6 +387,7 @@ export default function RoomPage() {
                       <div className="text-sm font-black uppercase text-game-magenta">Depuis cet appareil</div>
                       <div className="text-lg font-black text-game-purple">Je participe aussi</div>
                     </div>
+                    <AvatarPicker value={hostPlayerAvatar} onChange={setHostPlayerAvatar} compact />
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <input
                         value={hostPlayerName}

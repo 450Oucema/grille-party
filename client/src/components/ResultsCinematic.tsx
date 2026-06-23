@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CellPos, GridCell, PlayerResult } from '../types'
-import { AVATARS } from '../types'
+import AvatarToken from './AvatarToken'
 
 type Props = {
   results: PlayerResult[]
@@ -168,9 +168,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
               >
                 <div className="flex -space-x-2">
                   {activeReveal.players.map((p) => (
-                    <span key={p.id} className="grid h-11 w-11 place-items-center rounded-2xl border-[3px] border-game-purple bg-white text-2xl shadow-cartoon-sm">
-                      {AVATARS[p.avatar % AVATARS.length]}
-                    </span>
+                    <AvatarToken key={p.id} avatar={p.avatar} className="h-11 w-11" />
                   ))}
                 </div>
                 <div className="min-w-0">
@@ -233,12 +231,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
                 }`}
               >
                 <div className="text-center text-2xl sm:text-4xl">{MEDALS[i] ?? `${i + 1}`}</div>
-                <div
-                  className="grid h-12 w-12 place-items-center rounded-2xl border-[3px] border-game-purple text-2xl shadow-cartoon-sm sm:h-14 sm:w-14 sm:text-3xl"
-                  style={{ background: r.color }}
-                >
-                  {AVATARS[r.avatar % AVATARS.length]}
-                </div>
+                <AvatarToken avatar={r.avatar} className="h-12 w-12 sm:h-14 sm:w-14" />
                 <div className="min-w-0">
                   <div className="truncate text-xl font-black leading-tight text-game-purple sm:text-2xl">{r.playerName}</div>
                   <div className="text-sm font-extrabold leading-snug text-game-blue sm:text-base">

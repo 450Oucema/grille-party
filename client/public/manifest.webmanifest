@@ -1,0 +1,19 @@
+{
+  "name": "Grille Party",
+  "short_name": "Grille Party",
+  "description": "Jeu de mots multijoueur local.",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#39C1FF",
+  "theme_color": "#39C1FF",
+  "start_url": ".",
+  "scope": ".",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
