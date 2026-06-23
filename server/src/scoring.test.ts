@@ -40,6 +40,7 @@ function makePlayer(id: string, words: string[]): Player {
     words: new Set(words),
     connected: true,
     avatar: 0,
+    color: '#FF4DB8',
   }
 }
 

@@ -1,6 +1,6 @@
 import type { Player, WordResult, PlayerResult, ScoreMode } from './types.js'
 import { isValidWord, normalize } from './dictionary.js'
-import { canFormWord } from './grid.js'
+import { findWordPath } from './grid.js'
 import type { GridCell } from './types.js'
 
 export function wordScore(word: string): number {
@@ -72,7 +72,8 @@ export function computeResults(
     for (const word of player.words) {
       const norm = normalize(word)
       const validDict = isValidWord(norm)
-      const validPath = validDict ? canFormWord(norm, grid) : false
+      const path = validDict ? findWordPath(norm, grid) : null
+      const validPath = !!path
       const dupCount = wordCounts.get(norm) ?? 0
       const isDuplicated = dupCount > 1
 
@@ -93,6 +94,7 @@ export function computeResults(
         word,
         validDictionary: validDict,
         validPath,
+        path: path ?? [],
         duplicateCount: dupCount,
         score,
       })
@@ -102,6 +104,7 @@ export function computeResults(
       playerId: player.id,
       playerName: player.name,
       avatar: player.avatar,
+      color: player.color,
       totalScore,
       wordCount: wordResults.filter(w => w.validDictionary && w.validPath).length,
       words: wordResults,

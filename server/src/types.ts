@@ -7,6 +7,11 @@ export type GridCell = {
   col: number
 }
 
+export type CellPos = {
+  r: number
+  c: number
+}
+
 export type Player = {
   id: string
   socketId: string
@@ -14,6 +19,7 @@ export type Player = {
   words: Set<string>
   connected: boolean
   avatar: number // 0-7 index for emoji avatar
+  color: string
 }
 
 export type Room = {
@@ -36,6 +42,7 @@ export type WordResult = {
   word: string
   validDictionary: boolean
   validPath: boolean
+  path: CellPos[]
   duplicateCount: number
   score: number
 }
@@ -44,6 +51,7 @@ export type PlayerResult = {
   playerId: string
   playerName: string
   avatar: number
+  color: string
   totalScore: number
   wordCount: number
   words: WordResult[]
@@ -54,6 +62,7 @@ export type PublicPlayer = {
   id: string
   name: string
   avatar: number
+  color: string
   connected: boolean
   wordCount: number
 }

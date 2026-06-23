@@ -2,6 +2,7 @@ import type { Room, Player, PublicRoom, PublicPlayer } from './types.js'
 import { randomBytes } from 'crypto'
 
 const rooms = new Map<string, Room>()
+const PLAYER_COLORS = ['#FF4DB8', '#39E5B7', '#FFD94A', '#7B49FF', '#FF9B52', '#21E0D6', '#48E084', '#E9D6FF']
 
 function randomCode(len = 5): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -37,6 +38,7 @@ export function getRoom(code: string): Room | undefined {
 export function addPlayer(room: Room, socketId: string, name: string): Player {
   const id = `p${Date.now()}${Math.random().toString(36).slice(2, 5)}`
   const avatar = room.players.size % 8
+  const color = PLAYER_COLORS[room.players.size % PLAYER_COLORS.length]
   const player: Player = {
     id,
     socketId,
@@ -44,6 +46,7 @@ export function addPlayer(room: Room, socketId: string, name: string): Player {
     words: new Set(),
     connected: true,
     avatar,
+    color,
   }
   room.players.set(id, player)
   return player
@@ -90,6 +93,7 @@ export function toPublicRoom(room: Room): PublicRoom {
       id: p.id,
       name: p.name,
       avatar: p.avatar,
+      color: p.color,
       connected: p.connected,
       wordCount: p.words.size,
     })

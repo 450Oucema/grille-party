@@ -1,4 +1,4 @@
-import type { GridCell } from './types.js'
+import type { CellPos, GridCell } from './types.js'
 
 // 36 dice for 6x6 grid (French frequency weighted)
 const DICE_6x6: string[][] = [
@@ -88,15 +88,16 @@ function getNeighbors(r: number, c: number, size: number): [number, number][] {
   return neighbors
 }
 
-export function canFormWord(word: string, grid: GridCell[][]): boolean {
+export function findWordPath(word: string, grid: GridCell[][]): CellPos[] | null {
   const upper = word.toUpperCase()
   const size = grid.length
 
-  function dfs(remaining: string, r: number, c: number, visited: Set<string>): boolean {
+  function dfs(remaining: string, r: number, c: number, visited: Set<string>, path: CellPos[]): CellPos[] | null {
     const letter = grid[r][c].letter
-    if (!remaining.startsWith(letter)) return false
+    if (!remaining.startsWith(letter)) return null
     const rest = remaining.slice(letter.length)
-    if (rest.length === 0) return true
+    const nextPath = [...path, { r, c }]
+    if (rest.length === 0) return nextPath
 
     const key = `${r},${c}`
     const newVisited = new Set(visited)
@@ -104,16 +105,22 @@ export function canFormWord(word: string, grid: GridCell[][]): boolean {
 
     for (const [nr, nc] of getNeighbors(r, c, size)) {
       if (!newVisited.has(`${nr},${nc}`)) {
-        if (dfs(rest, nr, nc, newVisited)) return true
+        const found = dfs(rest, nr, nc, newVisited, nextPath)
+        if (found) return found
       }
     }
-    return false
+    return null
   }
 
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      if (dfs(upper, r, c, new Set())) return true
+      const found = dfs(upper, r, c, new Set(), [])
+      if (found) return found
     }
   }
-  return false
+  return null
+}
+
+export function canFormWord(word: string, grid: GridCell[][]): boolean {
+  return findWordPath(word, grid) !== null
 }

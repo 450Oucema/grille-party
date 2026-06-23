@@ -6,7 +6,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint src --ext .ts,.tsx",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "storybook": "HOME=./.storybook-home storybook dev -p 6006 --disable-telemetry",
+    "build-storybook": "HOME=./.storybook-home storybook build --disable-telemetry"
   },
   "dependencies": {
     "qrcode.react": "^3.1.0",
@@ -16,11 +18,16 @@
     "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
+    "@storybook/addon-essentials": "^8.6.15",
+    "@storybook/addon-interactions": "^8.6.15",
+    "@storybook/react-vite": "^8.6.15",
+    "@storybook/test": "^8.6.15",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
+    "storybook": "^8.6.15",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5",
     "vite": "^5.2.13"

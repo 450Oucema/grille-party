@@ -155,7 +155,7 @@ export default function RoomPage() {
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
   if (isPlayerView) {
     if (phase === 'results' && results) {
-      return <ResultsCinematic results={results} onDone={handleRestart} hideReplay />
+      return <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} hideReplay />
     }
 
     return (
@@ -413,7 +413,7 @@ export default function RoomPage() {
 
       {/* ── RESULTS cinematic (host only) ── */}
       {phase === 'results' && results && (
-        <ResultsCinematic results={results} onDone={handleRestart} />
+        <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} />
       )}
     </div>
   )
