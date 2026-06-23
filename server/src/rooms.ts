@@ -1,5 +1,6 @@
 import type { Room, Player, PublicRoom, PublicPlayer } from './types.js'
 import { randomBytes } from 'crypto'
+import { computeResults } from './scoring.js'
 
 const rooms = new Map<string, Room>()
 const PLAYER_COLORS = ['#FF4DB8', '#39E5B7', '#FFD94A', '#7B49FF', '#FF9B52', '#21E0D6', '#48E084', '#E9D6FF']
@@ -88,6 +89,12 @@ export function updateRoomSettings(room: Room, settings: { gridSize?: number; du
 
 export function toPublicRoom(room: Room): PublicRoom {
   const players: PublicPlayer[] = []
+  const scores = new Map<string, number>()
+  if (room.grid) {
+    for (const result of computeResults(room.players, room.grid, room.scoreMode)) {
+      scores.set(result.playerId, result.totalScore)
+    }
+  }
   for (const p of room.players.values()) {
     players.push({
       id: p.id,
@@ -96,6 +103,7 @@ export function toPublicRoom(room: Room): PublicRoom {
       color: p.color,
       connected: p.connected,
       wordCount: p.words.size,
+      score: scores.get(p.id) ?? 0,
     })
   }
   return {

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { socket } from '../socket'
-import type { PublicRoom, PlayerResult, ScoreMode } from '../types'
+import type { PublicPlayer, PublicRoom, PlayerResult, ScoreMode } from '../types'
+import { AVATARS } from '../types'
 import QRJoin from '../components/QRJoin'
 import Board from '../components/Board'
 import DraggableBoard from '../components/DraggableBoard'
@@ -14,6 +15,34 @@ type Feedback = {
   word: string
   status: 'accepted' | 'rejected' | 'duplicate'
   reason?: string
+}
+
+function PlayingScoreCards({ players }: { players: PublicPlayer[] }) {
+  const sortedPlayers = [...players].sort((a, b) => b.score - a.score)
+
+  return (
+    <div className="flex flex-col gap-3">
+      {sortedPlayers.map((p) => (
+        <div
+          key={p.id}
+          className={`flex items-center justify-between gap-3 rounded-2xl border-[3px] border-game-purple p-3 shadow-cartoon-sm transition-all ${
+            p.connected ? '' : 'opacity-60'
+          }`}
+          style={{ background: p.color }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border-[3px] border-game-purple bg-white text-2xl shadow-cartoon-sm">
+              {AVATARS[p.avatar % AVATARS.length]}
+            </span>
+            <span className="truncate text-base font-black text-game-purple">{p.name}</span>
+          </div>
+          <span className="font-display text-3xl font-extrabold leading-none text-game-purple">
+            {p.score}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 export default function RoomPage() {
@@ -373,8 +402,8 @@ export default function RoomPage() {
         <div className="game-content flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:gap-6 lg:overflow-hidden lg:p-6">
           {/* Left: player scores */}
           <div className="cartoon-panel flex shrink-0 flex-col gap-4 p-4 lg:w-64">
-            <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Joueurs</div>
-            <PlayerList players={room.players} showWordCount />
+            <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Scores</div>
+            <PlayingScoreCards players={room.players} />
           </div>
 
           {/* Center: grid + timer */}
@@ -384,29 +413,12 @@ export default function RoomPage() {
           </div>
 
           {/* Right: stats */}
-          <div className="flex shrink-0 flex-col gap-4 lg:w-64">
+          <div className="flex shrink-0 flex-col justify-start gap-4 lg:w-64">
             {isHost && currentPlayer && (
               <button onClick={() => setHostView('player')} className="btn-primary text-xl">
                 Jouer mes mots
               </button>
             )}
-            <div className="cartoon-card p-5 text-center">
-              <div className="text-sm font-black uppercase text-game-purple">Total mots</div>
-              <div className="cartoon-title-sm font-display text-7xl text-game-magenta">
-                {room.players.reduce((s, p) => s + p.wordCount, 0)}
-              </div>
-            </div>
-            <div className="cartoon-card p-5">
-              <div className="text-sm font-black uppercase text-game-purple">Mission</div>
-              <div className="mt-2 text-xl font-black text-game-blue">
-                {(room.scoreMode ?? 'classic') === 'rareLetters'
-                  ? 'Les lettres rares rapportent gros.'
-                  : 'Trouvez le plus de mots uniques.'}
-              </div>
-              <div className="mt-4 h-5 rounded-full border-[3px] border-game-purple bg-white p-0.5">
-                <div className="h-full animate-progress-fill rounded-full bg-game-magenta" />
-              </div>
-            </div>
           </div>
         </div>
       )}

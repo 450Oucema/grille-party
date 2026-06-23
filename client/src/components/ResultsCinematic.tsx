@@ -246,7 +246,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
                     {r.bestWord && (
                       <>
                         <span className="hidden sm:inline"> · </span>
-                        <span className="block sm:inline">meilleur : <span className="font-bold text-game-magenta">{r.bestWord}</span></span>
+                        <span className="block sm:inline">meilleur : <span className="font-black text-game-purple">{r.bestWord}</span></span>
                       </>
                     )}
                   </div>

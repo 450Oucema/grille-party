@@ -28,7 +28,7 @@ export default function ResultsTable({ results, myPlayerId }: Props) {
             <div className="truncate text-xl font-black text-game-purple">{r.playerName}</div>
             <div className="text-sm font-extrabold text-game-blue">
               {r.wordCount} mot{r.wordCount !== 1 ? 's' : ''} valide{r.wordCount !== 1 ? 's' : ''}
-              {r.bestWord && <span> · meilleur : <span className="text-game-yellow font-black">{r.bestWord}</span></span>}
+              {r.bestWord && <span> · meilleur : <span className="text-game-purple font-black">{r.bestWord}</span></span>}
             </div>
           </div>
           <div className="font-display text-4xl font-extrabold text-game-magenta">

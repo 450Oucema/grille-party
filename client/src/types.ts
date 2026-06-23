@@ -19,6 +19,7 @@ export type PublicPlayer = {
   color: string
   connected: boolean
   wordCount: number
+  score: number
 }
 
 export type PublicRoom = {
