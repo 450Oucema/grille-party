@@ -271,7 +271,7 @@ export default function RoomPage() {
         <div className="game-content flex flex-1 flex-col items-stretch gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:p-8">
           {/* Left: QR + code */}
           <div className="flex flex-col items-center gap-4 lg:gap-6">
-            <GameLogo size="md" />
+            <GameLogo size="room" />
             {roomCode && <QRJoin roomCode={roomCode} />}
           </div>
 
