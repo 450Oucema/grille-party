@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CellPos, GridCell, PlayerResult } from '../types'
 import AvatarToken from './AvatarToken'
+import { sound } from '../audio/sound'
 
 type Props = {
   results: PlayerResult[]
@@ -101,6 +102,8 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
   const [phase, setPhase] = useState<Phase>('buzzer')
   const [revealIdx, setRevealIdx] = useState(-1)
   const [allRevealed, setAllRevealed] = useState(false)
+  const playedRevealIdx = useRef(-1)
+  const playedPodium = useRef(false)
 
   const revealList = buildRevealList(results)
   const activeReveal = revealIdx >= 0 ? revealList[revealIdx] : undefined
@@ -109,6 +112,8 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
   // Phase machine
   useEffect(() => {
     if (phase === 'buzzer') {
+      sound.stopMusic()
+      sound.playGameEnd()
       const t = setTimeout(() => setPhase('words'), 1800)
       return () => clearTimeout(t)
     }
@@ -134,6 +139,18 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
       return () => clearTimeout(timer)
     }
   }, [phase, revealList.length])
+
+  useEffect(() => {
+    if (phase !== 'words' || !activeReveal || revealIdx === playedRevealIdx.current) return
+    playedRevealIdx.current = revealIdx
+    sound.playRevealWord(activeReveal.players[0]?.avatar ?? 0, activeReveal.bonus > 0)
+  }, [activeReveal, phase, revealIdx])
+
+  useEffect(() => {
+    if (phase !== 'podium' || playedPodium.current) return
+    playedPodium.current = true
+    sound.playPodium()
+  }, [phase])
 
   return (
     <div className="game-screen flex flex-col items-center justify-center overflow-hidden">
@@ -202,7 +219,10 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
           {/* Bouton continuer — apparaît quand tout est révélé */}
           {allRevealed && (
             <button
-              onClick={() => setPhase('podium')}
+              onClick={() => {
+                sound.playUiClick()
+                setPhase('podium')
+              }}
               className="btn-primary self-center shrink-0 animate-bounce-in"
             >
               Voir le classement
@@ -253,7 +273,10 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
 
           {!hideReplay && (
             <button
-              onClick={onDone}
+              onClick={() => {
+                sound.playReplay()
+                onDone()
+              }}
               className="btn-primary text-2xl mt-2"
             >
               Rejouer

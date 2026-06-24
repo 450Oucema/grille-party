@@ -4,6 +4,7 @@ import { socket } from '../socket'
 import AvatarPicker from '../components/AvatarPicker'
 import AvatarToken from '../components/AvatarToken'
 import GameLogo from '../components/GameLogo'
+import { sound } from '../audio/sound'
 
 export default function JoinPage() {
   const { roomCode } = useParams<{ roomCode: string }>()
@@ -47,6 +48,8 @@ export default function JoinPage() {
 
   const join = () => {
     if (!name.trim()) return
+    void sound.unlock()
+    sound.playJoin()
     setJoining(true)
     setError('')
     socket.emit('room:join', { roomCode: roomCode?.toUpperCase(), playerName: name.trim(), avatar })
@@ -113,7 +116,7 @@ export default function JoinPage() {
 
         <div className="cartoon-panel w-full p-3">
           <div className="mb-2 text-xs font-black uppercase text-game-purple">Avatar</div>
-          <AvatarPicker value={avatar} onChange={setAvatar} compact />
+          <AvatarPicker value={avatar} onChange={changeAvatar} compact />
         </div>
 
         {error && (

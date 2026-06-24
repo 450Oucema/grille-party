@@ -11,6 +11,8 @@ import Timer from '../components/Timer'
 import PlayerList from '../components/PlayerList'
 import ResultsCinematic from '../components/ResultsCinematic'
 import GameLogo from '../components/GameLogo'
+import SoundToggle from '../components/SoundToggle'
+import { sound } from '../audio/sound'
 
 type Feedback = {
   word: string
@@ -89,6 +91,7 @@ export default function RoomPage() {
   const [room, setRoom] = useState<PublicRoom | null>(null)
   const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [soundMuted, setSoundMuted] = useState(sound.isMuted())
 
   const isHost = !!hostToken
   const currentPlayer = room?.players.find(p => p.id === playerId)
@@ -96,6 +99,7 @@ export default function RoomPage() {
   const isPlayerView = !!playerId && (!isHost || (hostView === 'player' && phase !== 'results'))
 
   const emitWhenConnected = useCallback((event: string, payload: unknown) => {
+    void sound.unlock()
     if (socket.connected) {
       socket.emit(event, payload)
       return
@@ -103,6 +107,17 @@ export default function RoomPage() {
     socket.connect()
     socket.once('connect', () => socket.emit(event, payload))
   }, [])
+
+  useEffect(() => sound.subscribe((state) => setSoundMuted(state.muted)), [])
+
+  useEffect(() => {
+    if (phase === 'playing' && room?.endsAt && !soundMuted) {
+      sound.startMusic(room.endsAt)
+    } else {
+      sound.stopMusic()
+    }
+    return () => sound.stopMusic()
+  }, [phase, room?.endsAt, soundMuted])
 
   useEffect(() => {
     socket.connect()
@@ -128,14 +143,20 @@ export default function RoomPage() {
 
     socket.on('word:accepted-local', ({ word }: { word: string }) => {
       setFeedback({ word, status: 'accepted' })
+      sound.playAccepted(currentPlayer?.avatar ?? 0)
     })
 
     socket.on('word:rejected-local', ({ word, reason }: { word: string; reason: string }) => {
+      sound.playRejected()
       if (reason === 'deja_envoye') {
         setFeedback({ word, status: 'duplicate', reason })
       } else {
         setFeedback({ word, status: 'rejected', reason })
       }
+    })
+
+    socket.on('word:found-public', ({ avatar }: { playerId: string; avatar: number; wordCount: number }) => {
+      sound.playOpponentFound(avatar)
     })
 
     socket.on('error', ({ message }: { message: string }) => {
@@ -163,15 +184,18 @@ export default function RoomPage() {
       socket.off('game:ended')
       socket.off('word:accepted-local')
       socket.off('word:rejected-local')
+      socket.off('word:found-public')
       socket.off('error')
     }
-  }, [roomCode, playerId, hostToken])
+  }, [roomCode, playerId, hostToken, currentPlayer?.avatar])
 
   const handleStart = () => {
+    sound.playStart()
     emitWhenConnected('room:start', { roomCode, hostToken: hostToken ?? undefined })
   }
 
   const handleSettings = (gridSize: number, durationSec: number) => {
+    sound.playSetting()
     emitWhenConnected('room:settings', {
       roomCode,
       gridSize,
@@ -182,6 +206,7 @@ export default function RoomPage() {
   }
 
   const handleScoreMode = (scoreMode: ScoreMode) => {
+    sound.playSetting()
     emitWhenConnected('room:settings', {
       roomCode,
       gridSize: room?.gridSize ?? 6,
@@ -203,6 +228,7 @@ export default function RoomPage() {
   const handleHostJoinAsPlayer = () => {
     const playerName = hostPlayerName.trim()
     if (!roomCode || !playerName) return
+    sound.playJoin()
     emitWhenConnected('room:join', { roomCode, playerName, avatar: hostPlayerAvatar })
   }
 
@@ -222,6 +248,7 @@ export default function RoomPage() {
 
     return (
       <div className="game-screen flex flex-col">
+        <SoundToggle className="absolute bottom-3 right-3 z-20 px-2 py-1 text-xs" />
         {/* Header */}
         <div className="game-content flex items-center justify-between gap-2 px-3 py-3">
           <div className="status-pill bg-game-yellow px-3 py-2 text-lg text-game-purple">{roomCode}</div>
@@ -238,7 +265,10 @@ export default function RoomPage() {
         {isHost && (
           <div className="game-content px-3 pb-2">
             <button
-              onClick={() => setHostView('host')}
+              onClick={() => {
+                sound.playUiClick()
+                setHostView('host')
+              }}
               className="btn-secondary w-full py-2 text-base"
             >
               Retour au salon
@@ -295,6 +325,7 @@ export default function RoomPage() {
   // ─── HOST / TV VIEW ───────────────────────────────────────────────────────
   return (
     <div className="game-screen flex flex-col lg:h-screen lg:overflow-hidden">
+      <SoundToggle className="absolute right-4 top-4 z-20" />
       {/* ── LOBBY ── */}
       {phase === 'lobby' && (
         <div className="game-content flex flex-1 flex-col items-stretch gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:p-8">
@@ -442,7 +473,13 @@ export default function RoomPage() {
           {/* Right: stats */}
           <div className="flex shrink-0 flex-col justify-start gap-4 lg:w-64">
             {isHost && currentPlayer && (
-              <button onClick={() => setHostView('player')} className="btn-primary text-xl">
+              <button
+                onClick={() => {
+                  sound.playUiClick()
+                  setHostView('player')
+                }}
+                className="btn-primary text-xl"
+              >
                 Jouer mes mots
               </button>
             )}

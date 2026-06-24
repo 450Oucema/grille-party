@@ -1,4 +1,5 @@
 import { AVATAR_OPTIONS, getAvatarSrc } from '../avatars'
+import { sound } from '../audio/sound'
 
 type Props = {
   value: number
@@ -15,7 +16,10 @@ export default function AvatarPicker({ value, onChange, compact = false }: Props
           <button
             key={option.id}
             type="button"
-            onClick={() => onChange(index)}
+            onClick={() => {
+              sound.playSetting()
+              onChange(index)
+            }}
             aria-label={`Choisir avatar ${option.label}`}
             className={`grid aspect-square place-items-center overflow-hidden rounded-2xl border-[3px] border-game-purple bg-white shadow-cartoon-sm transition-transform ${
               selected ? 'scale-105 bg-game-yellow' : ''

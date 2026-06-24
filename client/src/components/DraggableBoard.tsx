@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import type { GridCell } from '../types'
+import { sound } from '../audio/sound'
 
 type CellPos = { r: number; c: number }
 
@@ -53,11 +54,13 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
 
   const startDrag = useCallback((r: number, c: number) => {
     if (disabled) return
+    void sound.unlock()
     const p = [{ r, c }]
     pathRef.current = p
     draggingRef.current = true
     setPath([...p])
-  }, [disabled])
+    sound.playLetter(grid[r][c].letter, 0)
+  }, [disabled, grid])
 
   const tryAddCell = useCallback((r: number, c: number) => {
     if (!draggingRef.current) return
@@ -69,6 +72,7 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
       const backtracked = p.slice(0, existingIdx + 1)
       pathRef.current = backtracked
       setPath([...backtracked])
+      sound.playBacktrack()
       return
     }
     const last = p[p.length - 1]
@@ -76,7 +80,8 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     const next = [...p, { r, c }]
     pathRef.current = next
     setPath([...next])
-  }, [])
+    sound.playLetter(grid[r][c].letter, next.length - 1)
+  }, [grid])
 
   const endDrag = useCallback(() => {
     if (!draggingRef.current) return

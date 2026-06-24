@@ -193,6 +193,11 @@ io.on('connection', (socket) => {
 
     player.words.add(norm)
     socket.emit('word:accepted-local', { word: norm })
+    socket.to(room.code).emit('word:found-public', {
+      playerId: player.id,
+      avatar: player.avatar,
+      wordCount: player.words.size,
+    })
 
     // Update word count for all
     io.to(room.code).emit('room:state', toPublicRoom(room))

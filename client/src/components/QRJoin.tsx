@@ -1,5 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useState } from 'react'
+import { sound } from '../audio/sound'
 
 type Props = {
   roomCode: string
@@ -21,6 +22,7 @@ export default function QRJoin({ roomCode }: Props) {
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
   const copyJoinUrl = async () => {
+    sound.playUiClick()
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url)
@@ -43,6 +45,7 @@ export default function QRJoin({ roomCode }: Props) {
   }
 
   const shareJoinUrl = async () => {
+    sound.playUiClick()
     const shareData: ShareData = {
       title: 'Grille Party',
       text: `Rejoins ma partie Grille Party : ${roomCode}`,

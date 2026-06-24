@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { socket } from '../socket'
 import GameLogo from '../components/GameLogo'
+import { sound } from '../audio/sound'
 
 export default function HostPage() {
   const navigate = useNavigate()
@@ -21,6 +22,8 @@ export default function HostPage() {
   }, [navigate])
 
   const createRoom = () => {
+    void sound.unlock()
+    sound.playJoin()
     setLoading(true)
     socket.emit('room:create')
   }
