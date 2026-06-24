@@ -149,7 +149,8 @@ function buildRevealList(results: PlayerResult[]): RevealWord[] {
     const baseScore = score - bonus
     list.push({ word, score: baseScore, bonus, path, players, isShared })
   }
-  return list.sort((a, b) => (b.score + b.bonus) - (a.score + a.bonus))
+  // Ascending: shortest/lowest first → crescendo toward the best words
+  return list.sort((a, b) => (a.score + a.bonus) - (b.score + b.bonus))
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -208,6 +209,45 @@ function ShareButton({ roomCode }: { roomCode?: string }) {
     <button onClick={handleShare} className="btn-secondary py-3 text-lg">
       {copied ? 'Lien copié !' : 'Partager le lien'}
     </button>
+  )
+}
+
+// ─── Running scoreboard during word reveal ───────────────────────────────────
+function RunningScores({ results, revealList, upToIdx }: {
+  results: PlayerResult[]
+  revealList: RevealWord[]
+  upToIdx: number
+}) {
+  const scores = new Map<string, number>()
+  for (const r of results) scores.set(r.playerId, 0)
+  for (let i = 0; i <= upToIdx && i < revealList.length; i++) {
+    const w = revealList[i]
+    const contribution = w.score + w.bonus
+    for (const p of w.players) {
+      scores.set(p.id, (scores.get(p.id) ?? 0) + contribution)
+    }
+  }
+  const sorted = [...results].sort((a, b) => (scores.get(b.playerId) ?? 0) - (scores.get(a.playerId) ?? 0))
+
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      {sorted.map(r => {
+        const score = scores.get(r.playerId) ?? 0
+        return (
+          <div
+            key={r.playerId}
+            className="flex items-center gap-1.5 rounded-full border-2 border-game-purple px-3 py-1 shadow-cartoon-sm"
+            style={{ background: r.color }}
+          >
+            <AvatarToken avatar={r.avatar} className="h-6 w-6" />
+            <span className="max-w-[80px] truncate text-xs font-black text-game-purple">{r.playerName}</span>
+            <span key={score} className="animate-bounce-in font-display text-base font-extrabold text-game-purple">
+              {score}
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -402,6 +442,8 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
           <div className="status-pill mx-auto shrink-0 bg-game-purple px-6 py-2 text-xl text-white">
             Comparaison des mots
           </div>
+
+          <RunningScores results={results} revealList={revealList} upToIdx={revealIdx} />
 
           {grid && <RevealGrid grid={grid} active={activeReveal} />}
 
