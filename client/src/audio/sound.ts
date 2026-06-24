@@ -19,6 +19,7 @@ const AVATAR_SAMPLES = [
   'avatar-arc-en-ciel.webm',
   'avatar-circus.webm',
 ]
+const SFX_SAMPLES = [...AVATAR_SAMPLES, 'end-game.webm', 'success-jingle.webm']
 
 class SoundManager {
   private context: AudioContext | null = null
@@ -31,6 +32,8 @@ class SoundManager {
   private musicDuckTimer: number | null = null
   private musicEndsAt: number | null = null
   private lastTickSecond: number | null = null
+  private sampleBuffers = new Map<string, AudioBuffer>()
+  private sampleLoads = new Map<string, Promise<AudioBuffer | null>>()
 
   getState(): SoundState {
     return { ...this.state }
@@ -66,6 +69,7 @@ class SoundManager {
     const context = this.getContext()
     if (!context) return
     if (context.state === 'suspended') await context.resume()
+    this.preloadSamples()
   }
 
   playUiClick() {
@@ -242,10 +246,65 @@ class SoundManager {
 
   private playSample(filename: string, bus: Bus, volumeScale = 1) {
     if (this.state.muted) return
+    const buffer = this.sampleBuffers.get(filename)
+    if (buffer) {
+      this.playBuffer(buffer, bus, volumeScale)
+      return
+    }
+
+    void this.loadSample(filename).then((loadedBuffer) => {
+      if (loadedBuffer && !this.state.muted) {
+        this.playBuffer(loadedBuffer, bus, volumeScale)
+      }
+    })
+  }
+
+  private preloadSamples() {
+    SFX_SAMPLES.forEach((filename) => {
+      void this.loadSample(filename)
+    })
+  }
+
+  private loadSample(filename: string) {
+    const cached = this.sampleBuffers.get(filename)
+    if (cached) return Promise.resolve(cached)
+
+    const pending = this.sampleLoads.get(filename)
+    if (pending) return pending
+
+    const load = fetch(`${SOUND_BASE_URL}${filename}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Could not load sound: ${filename}`)
+        return response.arrayBuffer()
+      })
+      .then((arrayBuffer) => {
+        const context = this.getContext()
+        if (!context) return null
+        return context.decodeAudioData(arrayBuffer)
+      })
+      .then((buffer) => {
+        if (buffer) this.sampleBuffers.set(filename, buffer)
+        return buffer
+      })
+      .catch(() => null)
+
+    this.sampleLoads.set(filename, load)
+    return load
+  }
+
+  private playBuffer(buffer: AudioBuffer, bus: Bus, volumeScale = 1) {
+    if (this.state.muted) return
+    const context = this.getContext()
+    if (!context || context.state !== 'running') return
+
     const volume = bus === 'music' ? MUSIC_VOLUME : SFX_VOLUME
-    const audio = new Audio(`${SOUND_BASE_URL}${filename}`)
-    audio.volume = Math.min(1, volume * volumeScale)
-    void audio.play().catch(() => undefined)
+    const source = context.createBufferSource()
+    const gain = context.createGain()
+    gain.gain.value = Math.min(1, volume * volumeScale)
+    source.buffer = buffer
+    source.connect(gain)
+    gain.connect(context.destination)
+    source.start()
   }
 
   private ensureMusicAudio() {
