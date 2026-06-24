@@ -24,7 +24,6 @@ type RevealWord = {
 type Phase = 'buzzer' | 'words' | 'awards' | 'podium'
 
 type Award = {
-  emoji: string
   title: string
   subtitle: string
   playerId: string
@@ -50,6 +49,16 @@ function useCountUp(target: number, duration = 1100, delay = 0): number {
     return () => cancelAnimationFrame(raf)
   }, [target, duration, delay])
   return value
+}
+
+// Scrabble FR letter values — used to find the "rarest" word independently of score mode
+const SCRABBLE_FR: Record<string, number> = {
+  A:1,E:1,I:1,L:1,N:1,O:1,R:1,S:1,T:1,U:1,
+  D:2,G:2,M:2,B:3,C:3,P:3,F:4,H:4,V:4,
+  J:8,Q:8,K:10,W:10,X:10,Y:10,Z:10,
+}
+function scrabbleScore(word: string): number {
+  return word.toUpperCase().split('').reduce((s, c) => s + (SCRABBLE_FR[c] ?? 0), 0)
 }
 
 // ─── Awards computation ────────────────────────────────────────────────────────
@@ -85,7 +94,7 @@ function computeAwards(results: PlayerResult[]): Award[] {
     }
   }
   if (longestResult && longestLen >= 5) {
-    awards.push({ emoji: '📏', title: 'Mot le plus long', subtitle: longestWordStr, ...pick(longestResult) })
+    awards.push({ title: 'Mot le plus long', subtitle: longestWordStr, ...pick(longestResult) })
   }
 
   // Most exclusive words
@@ -95,32 +104,30 @@ function computeAwards(results: PlayerResult[]): Award[] {
     if (n > maxUnique) { maxUnique = n; uniqueResult = r }
   }
   if (uniqueResult && maxUnique >= 2) {
-    awards.push({ emoji: '🦄', title: 'Explorateur unique', subtitle: `${maxUnique} mots en exclusivité`, ...pick(uniqueResult) })
+    awards.push({ title: 'Explorateur unique', subtitle: `${maxUnique} mots en exclusivité`, ...pick(uniqueResult) })
   }
 
-  // Best single-word score
-  let bestScore = 0, bestWordStr = '', bestResult: PlayerResult | null = null
+  // Rarest word (highest Scrabble letter value) — distinct from "longest"
+  let bestRare = 0, rareWordStr = '', rareResult: PlayerResult | null = null
   for (const r of results) {
     for (const w of r.words) {
-      if (w.validDictionary && w.validPath && w.score > bestScore) {
-        bestScore = w.score
-        bestWordStr = w.word
-        bestResult = r
+      if (w.validDictionary && w.validPath) {
+        const s = scrabbleScore(w.word)
+        if (s > bestRare) { bestRare = s; rareWordStr = w.word; rareResult = r }
       }
     }
   }
-  if (bestResult && bestScore >= 5) {
-    awards.push({ emoji: '💎', title: 'Mot le plus précieux', subtitle: `${bestWordStr}  +${bestScore} pts`, ...pick(bestResult) })
+  if (rareResult && rareWordStr !== longestWordStr && bestRare >= 10) {
+    awards.push({ title: 'Mot le plus rare', subtitle: rareWordStr, ...pick(rareResult) })
   }
 
-  // Most words found
+  // Most words found (only if notably ahead)
   const wordCounts = results.map(r => r.wordCount)
   const maxWords = Math.max(...wordCounts)
   const topWordsResult = results.find(r => r.wordCount === maxWords)
-  // Only award if notably ahead (at least 2 more words than second)
   const secondMax = wordCounts.filter(n => n < maxWords)[0] ?? 0
   if (topWordsResult && maxWords >= 5 && maxWords - secondMax >= 2) {
-    awards.push({ emoji: '🚀', title: 'Plus productif', subtitle: `${maxWords} mots valides`, ...pick(topWordsResult) })
+    awards.push({ title: 'Plus productif', subtitle: `${maxWords} mots valides`, ...pick(topWordsResult) })
   }
 
   return awards.slice(0, 3)
@@ -439,7 +446,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
 
           {allRevealed && (
             <button onClick={goToNextPhase} className="btn-primary self-center shrink-0 animate-bounce-in">
-              {awards.length > 0 ? 'Voir les récompenses ✨' : 'Voir le classement'}
+              {awards.length > 0 ? 'Voir les récompenses' : 'Voir le classement'}
             </button>
           )}
         </div>
@@ -449,7 +456,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
       {phase === 'awards' && (
         <div className="game-content flex h-full w-full flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-8 sm:px-8">
           <div className="cartoon-title w-full text-center text-[clamp(2.2rem,10vw,4.8rem)] text-game-yellow">
-            Récompenses ✨
+            Récompenses
           </div>
           <div className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
             {awards.map((award, i) => (
@@ -463,7 +470,6 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
                   background: award.playerColor,
                 }}
               >
-                <div className="text-4xl mb-2">{award.emoji}</div>
                 <div className="font-display text-xl font-extrabold text-game-purple leading-tight">{award.title}</div>
                 <div className="mt-1 font-black text-base text-game-purple/70 truncate">{award.subtitle}</div>
                 <div className="mt-3 flex items-center gap-2">
@@ -489,20 +495,6 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
             Classement final
           </div>
 
-          {results[0] && (
-            <div
-              className="animate-bounce-in flex items-center gap-3 rounded-[24px] border-4 border-game-purple px-5 py-3 shadow-cartoon-lg"
-              style={{ background: '#FFD94A', animationDelay: '80ms' }}
-            >
-              <div className="text-4xl">👑</div>
-              <AvatarToken avatar={results[0].avatar} className="h-14 w-14" />
-              <div className="min-w-0">
-                <div className="truncate font-display text-2xl font-black text-game-purple">{results[0].playerName}</div>
-                <div className="text-sm font-extrabold text-game-purple/70">Champion de la manche !</div>
-              </div>
-            </div>
-          )}
-
           <div className="flex w-full max-w-3xl flex-col gap-3">
             {results.map((r, i) => (
               <PodiumRow
@@ -527,7 +519,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
                 Rejouer
               </button>
               <div className="grid grid-cols-2 gap-3">
-                <Link to="/" className="btn-secondary py-3 text-center text-lg" onClick={() => sound.playUiClick()}>
+                <Link to="/" className="btn-secondary py-3 text-center text-lg whitespace-nowrap" onClick={() => sound.playUiClick()}>
                   Nouveau salon
                 </Link>
                 <ShareButton roomCode={roomCode} />

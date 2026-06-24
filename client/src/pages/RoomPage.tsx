@@ -224,6 +224,7 @@ export default function RoomPage() {
       setResults(null)
       setFeedEvents([])
       setShowCountdown(true)
+      setHostView('host')
     })
 
     socket.on('game:ended', ({ results: r }: { results: PlayerResult[] }) => {
