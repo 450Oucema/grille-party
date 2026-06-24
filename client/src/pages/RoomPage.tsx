@@ -96,7 +96,7 @@ function MobilePlayerWordCounts({ players }: { players: PublicPlayer[] }) {
   const sortedPlayers = [...players].sort((a, b) => b.wordCount - a.wordCount)
 
   return (
-    <div className="mx-3 mb-3 mt-2 flex-1 overflow-auto rounded-[24px] border-4 border-game-purple bg-white/90 px-3 pb-3 pt-3 shadow-cartoon">
+    <div className="mx-3 mb-3 mt-2 flex-1 overflow-auto rounded-[24px] border-4 border-game-purple bg-white/90 px-3 pb-3 pt-3 pb-safe shadow-cartoon">
       <div className="mb-2 text-xs font-black uppercase text-game-purple">
         Joueurs
       </div>
@@ -340,6 +340,7 @@ export default function RoomPage() {
   const handleRestart = () => {
     emitWhenConnected('room:restart', { roomCode, hostToken: hostToken ?? undefined })
     setResults(null)
+    if (isHost) setHostView('host')
   }
 
   const handleWordSubmit = useCallback((word: string) => {
@@ -554,7 +555,7 @@ export default function RoomPage() {
                 <div className="flex flex-col gap-2">
                   <div className="text-sm font-black uppercase text-game-purple">Durée</div>
                   <div className="grid grid-cols-3 gap-2">
-                    {[{label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
+                    {[{label:'10s', s:10}, {label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
                       <button
                         key={s}
                         onClick={() => handleSettings(room?.gridSize ?? 6, s)}

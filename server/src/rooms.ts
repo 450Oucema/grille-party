@@ -81,7 +81,7 @@ export function updateRoomSettings(room: Room, settings: { gridSize?: number; du
   if (settings.gridSize && [4, 6].includes(settings.gridSize)) {
     room.gridSize = settings.gridSize
   }
-  if (settings.durationSec && settings.durationSec >= 60 && settings.durationSec <= 300) {
+  if (settings.durationSec && /* settings.durationSec >= 60 && */ settings.durationSec <= 300) {
     room.durationSec = settings.durationSec
   }
   if (settings.scoreMode && ['classic', 'rareLetters'].includes(settings.scoreMode)) {

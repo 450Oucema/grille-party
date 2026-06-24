@@ -60,6 +60,17 @@
     background:
       radial-gradient(circle at 18% 8%, rgba(255,255,255,.42) 0 10%, transparent 11%),
       linear-gradient(180deg, #39C1FF 0%, #65D9FF 48%, #8175FF 100%);
+    /* safe areas iOS : évite que la home bar recouvre le contenu */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Utilitaire safe-area bottom pour les éléments en bas d'écran */
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 12px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
   }
 
   .game-screen::before {
