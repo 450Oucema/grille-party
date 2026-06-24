@@ -26,6 +26,7 @@ type FeedEvent = {
   playerName: string
   avatar: number
   color: string
+  word: string
 }
 
 function CountdownOverlay({ onDone }: { onDone: () => void }) {
@@ -243,12 +244,12 @@ export default function RoomPage() {
       }
     })
 
-    socket.on('word:found-public', ({ playerId, avatar }: { playerId: string; avatar: number; wordCount: number }) => {
+    socket.on('word:found-public', ({ playerId, avatar, word }: { playerId: string; avatar: number; wordCount: number; word: string }) => {
       sound.playOpponentFound(avatar)
       const player = roomRef.current?.players.find(p => p.id === playerId)
       if (player) {
         setFeedEvents(prev => [
-          { id: ++feedIdRef.current, playerId, playerName: player.name, avatar, color: player.color },
+          { id: ++feedIdRef.current, playerId, playerName: player.name, avatar, color: player.color, word: word ?? '' },
           ...prev,
         ].slice(0, 6))
       }
@@ -554,8 +555,8 @@ export default function RoomPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="text-sm font-black uppercase text-game-purple">Durée</div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[{label:'10s', s:10}, {label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{label:'⚡ 1 min', s:60},{label:'2 min', s:120},{label:'3 min', s:180},{label:'5 min', s:300}].map(({label, s}) => (
                       <button
                         key={s}
                         onClick={() => handleSettings(room?.gridSize ?? 6, s)}
@@ -703,16 +704,21 @@ export default function RoomPage() {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    {feedEvents.map((ev) => (
+                    {feedEvents.map((ev, i) => (
                       <div
                         key={ev.id}
                         className="flex animate-fade-slide-up items-center gap-2 rounded-2xl border-2 border-game-purple px-3 py-2 shadow-cartoon-sm"
-                        style={{ background: ev.color }}
+                        style={{ background: ev.color, opacity: i === 0 ? 1 : Math.max(0.45, 1 - i * 0.12) }}
                       >
                         <AvatarToken avatar={ev.avatar} className="h-8 w-8 shrink-0" />
-                        <span className="truncate text-sm font-black text-game-purple">
-                          {ev.playerName}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[10px] font-black uppercase tracking-wide text-game-purple/60">
+                            {ev.playerName}
+                          </div>
+                          <div className="truncate font-display text-base font-extrabold leading-none text-game-purple">
+                            {ev.word}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

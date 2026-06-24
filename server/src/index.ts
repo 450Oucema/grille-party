@@ -212,6 +212,7 @@ export function createGrillePartyServer(options: { socketPath?: string } = {}) {
       playerId: player.id,
       avatar: player.avatar,
       wordCount: player.words.size,
+      word: norm,
     })
 
     // Update word count for all

@@ -78,15 +78,42 @@ class SoundManager {
   }
 
   playSetting() {
-    this.playUiClick()
+    this.tone('sfx', 740, 0.07, 'square', 0.28, 900)
   }
 
   playJoin() {
-    this.playUiClick()
+    if (this.state.muted) return
+    // Ascending arpeggio: C - E - G
+    this.tone('sfx', 523, 0.07, 'square', 0.045)
+    window.setTimeout(() => this.tone('sfx', 659, 0.08, 'square', 0.045), 90)
+    window.setTimeout(() => {
+      this.tone('sfx', 784, 0.15, 'square', 0.06)
+      this.noise('sfx', 0.06, 0.025)
+    }, 180)
   }
 
   playStart() {
-    this.playUiClick()
+    if (this.state.muted) return
+    // Triumphant C+E chord, then octave-up fanfare
+    this.tone('sfx', 523, 0.10, 'square', 0.055)
+    this.tone('sfx', 659, 0.10, 'square', 0.04)
+    window.setTimeout(() => {
+      this.tone('sfx', 784, 0.18, 'square', 0.07)
+      this.noise('sfx', 0.09, 0.035)
+    }, 130)
+    window.setTimeout(() => this.tone('sfx', 1046, 0.28, 'square', 0.065, 880), 310)
+  }
+
+  playAward() {
+    if (this.state.muted) return
+    // Rising sparkle for award reveal
+    this.tone('sfx', 440, 0.06, 'square', 0.05)
+    window.setTimeout(() => this.tone('sfx', 554, 0.07, 'square', 0.05), 80)
+    window.setTimeout(() => {
+      this.tone('sfx', 659, 0.09, 'square', 0.06)
+      this.tone('sfx', 880, 0.09, 'square', 0.03)
+    }, 160)
+    window.setTimeout(() => this.noise('sfx', 0.06, 0.025), 250)
   }
 
   playLetter(letter: string, index: number) {

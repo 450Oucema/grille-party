@@ -14,14 +14,117 @@ type Props = {
 
 type RevealWord = {
   word: string
-  score: number        // score individuel (wordScore, sans bonus)
-  bonus: number        // 1 si unique, 0 si partagé
+  score: number
+  bonus: number
   path: CellPos[]
   players: { id: string; name: string; avatar: number; color: string }[]
   isShared: boolean
 }
 
-type Phase = 'buzzer' | 'words' | 'podium'
+type Phase = 'buzzer' | 'words' | 'awards' | 'podium'
+
+type Award = {
+  emoji: string
+  title: string
+  subtitle: string
+  playerId: string
+  playerName: string
+  playerAvatar: number
+  playerColor: string
+}
+
+// ─── Count-up hook ────────────────────────────────────────────────────────────
+function useCountUp(target: number, duration = 1100, delay = 0): number {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    const started = Date.now() + delay
+    const frame = () => {
+      const elapsed = Date.now() - started
+      if (elapsed < 0) { requestAnimationFrame(frame); return }
+      const t = Math.min(elapsed / duration, 1)
+      // ease-out cubic
+      setValue(Math.round(target * (1 - Math.pow(1 - t, 3))))
+      if (t < 1) requestAnimationFrame(frame)
+    }
+    const raf = requestAnimationFrame(frame)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration, delay])
+  return value
+}
+
+// ─── Awards computation ────────────────────────────────────────────────────────
+function computeAwards(results: PlayerResult[]): Award[] {
+  if (results.length < 2) return []
+  const awards: Award[] = []
+
+  const wordShareCount = new Map<string, number>()
+  for (const r of results) {
+    for (const w of r.words) {
+      if (w.validDictionary && w.validPath) {
+        wordShareCount.set(w.word, (wordShareCount.get(w.word) ?? 0) + 1)
+      }
+    }
+  }
+
+  const pick = (r: PlayerResult) => ({
+    playerId: r.playerId,
+    playerName: r.playerName,
+    playerAvatar: r.avatar,
+    playerColor: r.color,
+  })
+
+  // Longest valid word
+  let longestLen = 0, longestWordStr = '', longestResult: PlayerResult | null = null
+  for (const r of results) {
+    for (const w of r.words) {
+      if (w.validDictionary && w.validPath && w.word.length > longestLen) {
+        longestLen = w.word.length
+        longestWordStr = w.word
+        longestResult = r
+      }
+    }
+  }
+  if (longestResult && longestLen >= 5) {
+    awards.push({ emoji: '📏', title: 'Mot le plus long', subtitle: longestWordStr, ...pick(longestResult) })
+  }
+
+  // Most exclusive words
+  let maxUnique = 0, uniqueResult: PlayerResult | null = null
+  for (const r of results) {
+    const n = r.words.filter(w => w.validDictionary && w.validPath && wordShareCount.get(w.word) === 1).length
+    if (n > maxUnique) { maxUnique = n; uniqueResult = r }
+  }
+  if (uniqueResult && maxUnique >= 2) {
+    awards.push({ emoji: '🦄', title: 'Explorateur unique', subtitle: `${maxUnique} mots en exclusivité`, ...pick(uniqueResult) })
+  }
+
+  // Best single-word score
+  let bestScore = 0, bestWordStr = '', bestResult: PlayerResult | null = null
+  for (const r of results) {
+    for (const w of r.words) {
+      if (w.validDictionary && w.validPath && w.score > bestScore) {
+        bestScore = w.score
+        bestWordStr = w.word
+        bestResult = r
+      }
+    }
+  }
+  if (bestResult && bestScore >= 5) {
+    awards.push({ emoji: '💎', title: 'Mot le plus précieux', subtitle: `${bestWordStr}  +${bestScore} pts`, ...pick(bestResult) })
+  }
+
+  // Most words found
+  const wordCounts = results.map(r => r.wordCount)
+  const maxWords = Math.max(...wordCounts)
+  const topWordsResult = results.find(r => r.wordCount === maxWords)
+  // Only award if notably ahead (at least 2 more words than second)
+  const secondMax = wordCounts.filter(n => n < maxWords)[0] ?? 0
+  if (topWordsResult && maxWords >= 5 && maxWords - secondMax >= 2) {
+    awards.push({ emoji: '🚀', title: 'Plus productif', subtitle: `${maxWords} mots valides`, ...pick(topWordsResult) })
+  }
+
+  return awards.slice(0, 3)
+}
 
 function buildRevealList(results: PlayerResult[]): RevealWord[] {
   const seen = new Map<string, { score: number; path: CellPos[]; players: RevealWord['players'] }>()
@@ -29,18 +132,12 @@ function buildRevealList(results: PlayerResult[]): RevealWord[] {
     for (const w of r.words) {
       if (!w.validDictionary || !w.validPath) continue
       if (!seen.has(w.word)) seen.set(w.word, { score: w.score, path: w.path, players: [] })
-      seen.get(w.word)!.players.push({
-        id: r.playerId,
-        name: r.playerName,
-        avatar: r.avatar,
-        color: r.color,
-      })
+      seen.get(w.word)!.players.push({ id: r.playerId, name: r.playerName, avatar: r.avatar, color: r.color })
     }
   }
   const list: RevealWord[] = []
   for (const [word, { score, path, players }] of seen) {
     const isShared = players.length > 1
-    // score du serveur inclut déjà le bonus ; pour l'affichage on recalcule
     const bonus = isShared ? 0 : 1
     const baseScore = score - bonus
     list.push({ word, score: baseScore, bonus, path, players, isShared })
@@ -49,6 +146,36 @@ function buildRevealList(results: PlayerResult[]): RevealWord[] {
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
+
+// ─── Confetti for #1 ─────────────────────────────────────────────────────────
+function Confetti() {
+  const pieces = Array.from({ length: 22 }, (_, i) => ({
+    left: `${5 + Math.random() * 90}%`,
+    delay: `${Math.random() * 1.1}s`,
+    color: ['#FFD94A', '#FF4DB8', '#39E5B7', '#7B49FF', '#FF9B52'][i % 5],
+    size: 8 + Math.random() * 9,
+    rotate: Math.random() * 360,
+  }))
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {pieces.map((p, i) => (
+        <div
+          key={i}
+          className="absolute animate-confetti-fall rounded-sm border-[1.5px] border-game-purple"
+          style={{
+            left: p.left,
+            top: '-12px',
+            width: p.size,
+            height: p.size * (0.6 + Math.random() * 0.8),
+            background: p.color,
+            animationDelay: p.delay,
+            transform: `rotate(${p.rotate}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
 
 function ShareButton({ roomCode }: { roomCode?: string }) {
   const [copied, setCopied] = useState(false)
@@ -65,7 +192,7 @@ function ShareButton({ roomCode }: { roomCode?: string }) {
         setTimeout(() => setCopied(false), 2000)
       }
     } catch {
-      // user dismissed share dialog
+      // user dismissed
     }
     sound.playUiClick()
   }
@@ -77,9 +204,7 @@ function ShareButton({ roomCode }: { roomCode?: string }) {
   )
 }
 
-function pathKey(pos: CellPos): string {
-  return `${pos.r},${pos.c}`
-}
+function pathKey(pos: CellPos): string { return `${pos.r},${pos.c}` }
 
 function RevealGrid({ grid, active }: { grid: GridCell[][]; active?: RevealWord }) {
   const activePath = new Map(active?.path.map((pos, index) => [pathKey(pos), index]) ?? [])
@@ -127,14 +252,56 @@ function RevealGrid({ grid, active }: { grid: GridCell[][]; active?: RevealWord 
   )
 }
 
+// ─── Podium row with count-up score ───────────────────────────────────────────
+function PodiumRow({ result, rank, delay, isActive }: { result: PlayerResult; rank: number; delay: number; isActive: boolean }) {
+  const score = useCountUp(isActive ? result.totalScore : 0, 1100, delay + 200)
+
+  return (
+    <div
+      className={`animate-podium-entry grid grid-cols-[2.25rem_3.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border-4 border-game-purple px-3 py-3 shadow-cartoon sm:grid-cols-[3rem_4rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 ${
+        rank === 0 ? 'scale-[1.03] bg-game-yellow' : rank === 1 ? 'bg-game-lilac' : 'bg-white'
+      }`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="text-center text-2xl sm:text-4xl">{MEDALS[rank] ?? `${rank + 1}`}</div>
+      <AvatarToken avatar={result.avatar} className="h-12 w-12 sm:h-14 sm:w-14" />
+      <div className="min-w-0">
+        <div className="truncate text-xl font-black leading-tight text-game-purple sm:text-2xl">{result.playerName}</div>
+        <div className="text-sm font-extrabold leading-snug text-game-blue sm:text-base">
+          {result.wordCount} mot{result.wordCount !== 1 ? 's' : ''}
+          {result.bestWord && (
+            <>
+              <span className="hidden sm:inline"> · meilleur : </span>
+              <span className="block sm:inline font-black text-game-purple">{result.bestWord}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <div
+        className={`min-w-[3.5rem] text-right font-display font-extrabold leading-none sm:min-w-[5rem] ${
+          rank === 0 ? 'text-game-magenta' : 'text-game-violet'
+        }`}
+        style={{ fontSize: 'clamp(2.4rem,11vw,4rem)' }}
+      >
+        {score}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ────────────────────────────────────────────────────────────
 export default function ResultsCinematic({ results, grid, onDone, hideReplay, roomCode }: Props) {
   const [phase, setPhase] = useState<Phase>('buzzer')
   const [revealIdx, setRevealIdx] = useState(-1)
   const [allRevealed, setAllRevealed] = useState(false)
+  const [awardsVisible, setAwardsVisible] = useState(false)
+  const [podiumActive, setPodiumActive] = useState(false)
   const playedRevealIdx = useRef(-1)
   const playedPodium = useRef(false)
+  const awardTimers = useRef<number[]>([])
 
   const revealList = buildRevealList(results)
+  const awards = computeAwards(results)
   const activeReveal = revealIdx >= 0 ? revealList[revealIdx] : undefined
   const revealedWords = revealList.slice(0, revealIdx + 1).slice(-5)
 
@@ -146,28 +313,42 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
       const t = setTimeout(() => setPhase('words'), 1800)
       return () => clearTimeout(t)
     }
+
     if (phase === 'words') {
       setRevealIdx(-1)
       setAllRevealed(false)
-      if (revealList.length === 0) {
-        setAllRevealed(true)
-        return
-      }
+      if (revealList.length === 0) { setAllRevealed(true); return }
       let i = 0
       let timer: ReturnType<typeof setTimeout>
       const next = () => {
-        setRevealIdx(i)
-        i++
-        if (i < revealList.length) {
-          timer = setTimeout(next, 1250)
-        } else {
-          setAllRevealed(true)
-        }
+        setRevealIdx(i++)
+        if (i < revealList.length) timer = setTimeout(next, 1250)
+        else setAllRevealed(true)
       }
       timer = setTimeout(next, 300)
       return () => clearTimeout(timer)
     }
-  }, [phase, revealList.length])
+
+    if (phase === 'awards') {
+      setAwardsVisible(false)
+      const t1 = window.setTimeout(() => setAwardsVisible(true), 100)
+      awardTimers.current.push(t1)
+      // Play award sound for each badge
+      awards.forEach((_, i) => {
+        const t = window.setTimeout(() => sound.playAward(), 300 + i * 500)
+        awardTimers.current.push(t)
+      })
+      return () => {
+        awardTimers.current.forEach(clearTimeout)
+        awardTimers.current = []
+      }
+    }
+
+    if (phase === 'podium') {
+      const t = setTimeout(() => setPodiumActive(true), 100)
+      return () => clearTimeout(t)
+    }
+  }, [phase, revealList.length, awards.length])
 
   useEffect(() => {
     if (phase !== 'words' || !activeReveal || revealIdx === playedRevealIdx.current) return
@@ -181,8 +362,19 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
     sound.playPodium()
   }, [phase])
 
+  const goToNextPhase = () => {
+    sound.playUiClick()
+    if (phase === 'words') {
+      if (awards.length > 0) setPhase('awards')
+      else setPhase('podium')
+    } else if (phase === 'awards') {
+      setPhase('podium')
+    }
+  }
+
   return (
     <div className="game-screen flex flex-col items-center justify-center overflow-hidden">
+
       {/* ── BUZZER ── */}
       {phase === 'buzzer' && (
         <div className="game-content flex flex-col items-center gap-7 animate-bounce-in">
@@ -197,7 +389,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
         </div>
       )}
 
-      {/* ── WORD REVEAL ── grille + chemin ── */}
+      {/* ── WORD REVEAL ── */}
       {phase === 'words' && (
         <div className="game-content flex h-full w-full flex-col items-center justify-center gap-4 overflow-hidden px-4 py-5 sm:px-6">
           <div className="status-pill mx-auto shrink-0 bg-game-purple px-6 py-2 text-xl text-white">
@@ -245,59 +437,81 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
             </div>
           </div>
 
-          {/* Bouton continuer — apparaît quand tout est révélé */}
           {allRevealed && (
-            <button
-              onClick={() => {
-                sound.playUiClick()
-                setPhase('podium')
-              }}
-              className="btn-primary self-center shrink-0 animate-bounce-in"
-            >
-              Voir le classement
+            <button onClick={goToNextPhase} className="btn-primary self-center shrink-0 animate-bounce-in">
+              {awards.length > 0 ? 'Voir les récompenses ✨' : 'Voir le classement'}
             </button>
           )}
         </div>
       )}
 
+      {/* ── AWARDS ── */}
+      {phase === 'awards' && (
+        <div className="game-content flex h-full w-full flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-8 sm:px-8">
+          <div className="cartoon-title w-full text-center text-[clamp(2.2rem,10vw,4.8rem)] text-game-yellow">
+            Récompenses ✨
+          </div>
+          <div className="flex w-full max-w-2xl flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-center">
+            {awards.map((award, i) => (
+              <div
+                key={award.title}
+                className={`flex-1 min-w-[220px] animate-award-reveal rounded-[24px] border-4 border-game-purple p-5 shadow-cartoon ${
+                  awardsVisible ? '' : 'opacity-0'
+                }`}
+                style={{
+                  animationDelay: `${i * 220}ms`,
+                  background: award.playerColor,
+                }}
+              >
+                <div className="text-4xl mb-2">{award.emoji}</div>
+                <div className="font-display text-xl font-extrabold text-game-purple leading-tight">{award.title}</div>
+                <div className="mt-1 font-black text-base text-game-purple/70 truncate">{award.subtitle}</div>
+                <div className="mt-3 flex items-center gap-2">
+                  <AvatarToken avatar={award.playerAvatar} className="h-9 w-9" />
+                  <span className="font-black text-game-purple truncate">{award.playerName}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={goToNextPhase} className="btn-primary animate-bounce-in mt-2 px-10 py-4 text-xl">
+            Voir le classement 🏆
+          </button>
+        </div>
+      )}
+
       {/* ── PODIUM ── */}
       {phase === 'podium' && (
-        <div className="game-content flex h-full w-full animate-bounce-in flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-8 sm:px-8">
+        <div className="game-content relative flex h-full w-full animate-bounce-in flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-8 sm:px-8">
+          {/* Confetti for #1 */}
+          {results[0] && <Confetti />}
+
           <div className="cartoon-title w-full text-center text-[clamp(2.6rem,11vw,5.4rem)] text-game-yellow">
             Classement final
           </div>
 
+          {results[0] && (
+            <div
+              className="animate-bounce-in flex items-center gap-3 rounded-[24px] border-4 border-game-purple px-5 py-3 shadow-cartoon-lg"
+              style={{ background: '#FFD94A', animationDelay: '80ms' }}
+            >
+              <div className="text-4xl">👑</div>
+              <AvatarToken avatar={results[0].avatar} className="h-14 w-14" />
+              <div className="min-w-0">
+                <div className="truncate font-display text-2xl font-black text-game-purple">{results[0].playerName}</div>
+                <div className="text-sm font-extrabold text-game-purple/70">Champion de la manche !</div>
+              </div>
+            </div>
+          )}
+
           <div className="flex w-full max-w-3xl flex-col gap-3">
             {results.map((r, i) => (
-              <div
+              <PodiumRow
                 key={r.playerId}
-                className={`animate-podium-entry grid grid-cols-[2.25rem_3.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border-4 border-game-purple px-3 py-3 shadow-cartoon sm:grid-cols-[3rem_4rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 ${
-                  i === 0
-                    ? 'scale-[1.03] bg-game-yellow'
-                    : i === 1
-                    ? 'bg-game-lilac'
-                    : 'bg-white'
-                }`}
-                style={{ animationDelay: `${i * 160}ms` }}
-              >
-                <div className="text-center text-2xl sm:text-4xl">{MEDALS[i] ?? `${i + 1}`}</div>
-                <AvatarToken avatar={r.avatar} className="h-12 w-12 sm:h-14 sm:w-14" />
-                <div className="min-w-0">
-                  <div className="truncate text-xl font-black leading-tight text-game-purple sm:text-2xl">{r.playerName}</div>
-                  <div className="text-sm font-extrabold leading-snug text-game-blue sm:text-base">
-                    {r.wordCount} mot{r.wordCount !== 1 ? 's' : ''} valide{r.wordCount !== 1 ? 's' : ''}
-                    {r.bestWord && (
-                      <>
-                        <span className="hidden sm:inline"> · </span>
-                        <span className="block sm:inline">meilleur : <span className="font-black text-game-purple">{r.bestWord}</span></span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="min-w-[3.5rem] text-right font-display text-[clamp(2.7rem,13vw,4.4rem)] font-extrabold leading-none text-game-magenta sm:min-w-[5rem]">
-                  {r.totalScore}
-                </div>
-              </div>
+                result={r}
+                rank={i}
+                delay={i * 160}
+                isActive={podiumActive}
+              />
             ))}
           </div>
 
@@ -313,11 +527,7 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay, ro
                 Rejouer
               </button>
               <div className="grid grid-cols-2 gap-3">
-                <Link
-                  to="/"
-                  className="btn-secondary py-3 text-center text-lg"
-                  onClick={() => sound.playUiClick()}
-                >
+                <Link to="/" className="btn-secondary py-3 text-center text-lg" onClick={() => sound.playUiClick()}>
                   Nouveau salon
                 </Link>
                 <ShareButton roomCode={roomCode} />
