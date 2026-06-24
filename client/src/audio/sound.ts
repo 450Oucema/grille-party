@@ -95,6 +95,10 @@ class SoundManager {
     this.tone('sfx', 220, 0.08, 'triangle', 0.18, 160)
   }
 
+  playAvatarChoice(avatar: number) {
+    this.playAvatarSample(avatar, 0.82)
+  }
+
   playAccepted(avatar: number) {
     this.duckMusic()
     this.playAvatarSample(avatar)

@@ -17,7 +17,8 @@ export default function AvatarPicker({ value, onChange, compact = false }: Props
             key={option.id}
             type="button"
             onClick={() => {
-              sound.playSetting()
+              void sound.unlock()
+              sound.playAvatarChoice(index)
               onChange(index)
             }}
             aria-label={`Choisir avatar ${option.label}`}
