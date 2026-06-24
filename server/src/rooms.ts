@@ -24,7 +24,7 @@ export function createRoom(): Room {
     createdAt: Date.now(),
     hostToken: randomBytes(24).toString('hex'),
     players: new Map(),
-    durationSec: 180,
+    durationSec: 120,
     gridSize: 6,
     scoreMode: 'classic',
   }

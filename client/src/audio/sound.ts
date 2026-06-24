@@ -163,14 +163,29 @@ class SoundManager {
     }
   }
 
+  playCountdownTick(n: number) {
+    // Called during the 3-2-1 overlay. Higher pitch = higher number.
+    const freq = n === 3 ? 660 : n === 2 ? 780 : n === 1 ? 920 : 1200
+    const gain = n === 0 ? 0.09 : 0.06
+    this.tone('sfx', freq, n === 0 ? 0.18 : 0.08, 'square', gain)
+    if (n === 0) this.noise('sfx', 0.06, 0.06)
+  }
+
   private tickMusic() {
     if (this.state.muted) return
     const remaining = this.musicEndsAt ? this.musicEndsAt - Date.now() : 99999
-    if (remaining < 10000) {
+    if (remaining < 11000) {
       const second = Math.ceil(Math.max(0, remaining) / 1000)
-      if (second !== this.lastTickSecond && second <= 5) {
+      if (second !== this.lastTickSecond) {
         this.lastTickSecond = second
-        this.tone('sfx', 1100, 0.035, 'square', 0.028)
+        if (second <= 5) {
+          // Last 5s: loud, higher tick
+          this.tone('sfx', 1200 + second * 40, 0.055, 'square', 0.038)
+          this.noise('sfx', 0.02, 0.02)
+        } else if (second <= 10) {
+          // 6-10s: softer tick
+          this.tone('sfx', 900, 0.04, 'square', 0.022)
+        }
       }
     }
   }

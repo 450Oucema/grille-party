@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { socket } from '../socket'
 import type { PublicPlayer, PublicRoom, PlayerResult, ScoreMode } from '../types'
@@ -18,6 +18,52 @@ type Feedback = {
   word: string
   status: 'accepted' | 'rejected' | 'duplicate'
   reason?: string
+}
+
+type FeedEvent = {
+  id: number
+  playerId: string
+  playerName: string
+  avatar: number
+  color: string
+}
+
+function CountdownOverlay({ onDone }: { onDone: () => void }) {
+  const [num, setNum] = useState(3)
+
+  useEffect(() => {
+    sound.playCountdownTick(3)
+    const timers = [
+      window.setTimeout(() => { setNum(2); sound.playCountdownTick(2) }, 700),
+      window.setTimeout(() => { setNum(1); sound.playCountdownTick(1) }, 1400),
+      window.setTimeout(() => { setNum(0); sound.playCountdownTick(0) }, 2100),
+      window.setTimeout(() => { onDone() }, 2600),
+    ]
+    return () => timers.forEach(clearTimeout)
+  }, [onDone])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-game-purple/80 backdrop-blur-sm" />
+      <div key={num} className="relative flex flex-col items-center animate-countdown-zoom">
+        {num > 0 ? (
+          <div
+            className="cartoon-title leading-none"
+            style={{ fontSize: 'clamp(7rem, 30vw, 18rem)', WebkitTextStroke: '6px #17012E', color: '#FFD94A' }}
+          >
+            {num}
+          </div>
+        ) : (
+          <div
+            className="cartoon-title leading-none"
+            style={{ fontSize: 'clamp(4.5rem, 22vw, 13rem)', WebkitTextStroke: '5px #17012E', color: '#39E5B7' }}
+          >
+            GO !
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function PlayingScoreCards({ players }: { players: PublicPlayer[] }) {
@@ -96,11 +142,43 @@ export default function RoomPage() {
   const [playerSessionLost, setPlayerSessionLost] = useState(false)
   const [hostSessionLost, setHostSessionLost] = useState(false)
   const [socketConnected, setSocketConnected] = useState(socket.connected)
+  const [showCountdown, setShowCountdown] = useState(false)
+  const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([])
+  const [recentJoinIds, setRecentJoinIds] = useState<Set<string>>(new Set())
+  const roomRef = useRef<PublicRoom | null>(null)
+  const feedIdRef = useRef(0)
+  const prevPlayerIdsRef = useRef<string[]>([])
 
   const isHost = !!hostToken
   const currentPlayer = room?.players.find(p => p.id === playerId)
   const phase = room?.phase ?? 'lobby'
-  const isPlayerView = !!playerId && (!isHost || (hostView === 'player' && phase !== 'results'))
+  const isPlayerView = !!playerId && (!isHost || hostView === 'player')
+
+  // Keep roomRef in sync for use inside socket handlers
+  useEffect(() => { roomRef.current = room }, [room])
+
+  // Detect new player joins for lobby animation
+  const playerIdsKey = room?.players.map(p => p.id).join(',') ?? ''
+  useEffect(() => {
+    if (!room) return
+    const currentIds = room.players.map(p => p.id)
+    const prevIds = prevPlayerIdsRef.current
+    const newIds = currentIds.filter(id => !prevIds.includes(id))
+    prevPlayerIdsRef.current = currentIds
+    if (newIds.length > 0 && prevIds.length > 0) {
+      sound.playJoin()
+      setRecentJoinIds(prev => new Set([...prev, ...newIds]))
+      const timer = window.setTimeout(() => {
+        setRecentJoinIds(prev => {
+          const next = new Set(prev)
+          newIds.forEach(id => next.delete(id))
+          return next
+        })
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerIdsKey])
 
   const emitWhenConnected = useCallback((event: string, payload: unknown) => {
     void sound.unlock()
@@ -143,6 +221,8 @@ export default function RoomPage() {
 
     socket.on('game:started', () => {
       setResults(null)
+      setFeedEvents([])
+      setShowCountdown(true)
     })
 
     socket.on('game:ended', ({ results: r }: { results: PlayerResult[] }) => {
@@ -163,8 +243,15 @@ export default function RoomPage() {
       }
     })
 
-    socket.on('word:found-public', ({ avatar }: { playerId: string; avatar: number; wordCount: number }) => {
+    socket.on('word:found-public', ({ playerId, avatar }: { playerId: string; avatar: number; wordCount: number }) => {
       sound.playOpponentFound(avatar)
+      const player = roomRef.current?.players.find(p => p.id === playerId)
+      if (player) {
+        setFeedEvents(prev => [
+          { id: ++feedIdRef.current, playerId, playerName: player.name, avatar, color: player.color },
+          ...prev,
+        ].slice(0, 6))
+      }
     })
 
     socket.on('error', ({ message }: { message: string }) => {
@@ -334,11 +421,12 @@ export default function RoomPage() {
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
   if (isPlayerView) {
     if (phase === 'results' && results) {
-      return <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} hideReplay />
+      return <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} hideReplay={!isHost} roomCode={isHost ? roomCode : undefined} />
     }
 
     return (
       <div className="game-screen flex flex-col">
+        {showCountdown && phase === 'playing' && <CountdownOverlay onDone={() => setShowCountdown(false)} />}
         <SoundToggle className="absolute bottom-3 right-3 z-20 px-2 py-1 text-xs" />
         {!socketConnected && (
           <div className="absolute left-3 top-3 z-30 rounded-full border-[3px] border-game-purple bg-game-yellow px-3 py-1 text-xs font-black text-game-purple shadow-cartoon-sm">
@@ -429,168 +517,214 @@ export default function RoomPage() {
       )}
       {/* ── LOBBY ── */}
       {phase === 'lobby' && (
-        <div className="game-content flex flex-1 flex-col items-stretch gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:p-8">
-          {/* Left: QR + code */}
-          <div className="flex flex-col items-center gap-4 lg:gap-6">
+        <div className="game-content flex flex-1 flex-col items-stretch gap-5 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {/* Logo centré en haut sur desktop */}
+          <div className="flex justify-center">
             <GameLogo size="room" />
-            {roomCode && <QRJoin roomCode={roomCode} />}
           </div>
 
-          {/* Right: settings + player list + start */}
-          <div className="flex w-full flex-col gap-4 sm:gap-5 lg:min-w-[360px] lg:max-w-[440px]">
-            {/* Settings */}
-            <div className="cartoon-panel flex flex-col gap-4 p-4 sm:p-5">
-              <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Paramètres</div>
-              <div className="flex flex-col gap-2">
-                <div className="text-sm font-black uppercase text-game-purple">Taille de grille</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[4, 6].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => handleSettings(s, room?.durationSec ?? 120)}
-                      className={`segmented-option flex-1 text-lg ${
-                        (room?.gridSize ?? 6) === s
-                          ? 'segmented-option-selected text-game-purple'
-                          : 'text-game-purple'
-                      }`}
-                    >
-                      {s}×{s}
-                    </button>
-                  ))}
+          {/* Trois colonnes sur desktop */}
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-center lg:gap-8">
+
+            {/* Col 1 : QR code */}
+            <div className="flex flex-col items-center gap-4 lg:shrink-0 lg:pt-1">
+              {roomCode && <QRJoin roomCode={roomCode} />}
+            </div>
+
+            {/* Col 2 : Paramètres */}
+            <div className="flex w-full flex-col gap-4 lg:w-[300px] lg:shrink-0">
+              <div className="cartoon-panel flex flex-col gap-4 p-4 sm:p-5">
+                <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Paramètres</div>
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm font-black uppercase text-game-purple">Taille de grille</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[4, 6].map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleSettings(s, room?.durationSec ?? 120)}
+                        className={`segmented-option flex-1 text-lg ${
+                          (room?.gridSize ?? 6) === s ? 'segmented-option-selected text-game-purple' : 'text-game-purple'
+                        }`}
+                      >
+                        {s}×{s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="text-sm font-black uppercase text-game-purple">Durée</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[{label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
-                    <button
-                      key={s}
-                      onClick={() => handleSettings(room?.gridSize ?? 6, s)}
-                      className={`segmented-option flex-1 text-sm ${
-                        (room?.durationSec ?? 120) === s
-                          ? 'segmented-option-selected text-game-purple'
-                          : 'text-game-purple'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm font-black uppercase text-game-purple">Durée</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[{label:'1 min', s:60},{label:'2 min', s:120}].map(({label, s}) => (
+                      <button
+                        key={s}
+                        onClick={() => handleSettings(room?.gridSize ?? 6, s)}
+                        className={`segmented-option flex-1 text-sm ${
+                          (room?.durationSec ?? 120) === s ? 'segmented-option-selected text-game-purple' : 'text-game-purple'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="text-sm font-black uppercase text-game-purple">Score</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Classique', mode: 'classic' as const },
-                    { label: 'Lettres rares', mode: 'rareLetters' as const },
-                  ].map(({ label, mode }) => (
-                    <button
-                      key={mode}
-                      onClick={() => handleScoreMode(mode)}
-                      className={`segmented-option flex-1 text-sm ${
-                        (room?.scoreMode ?? 'classic') === mode
-                          ? 'segmented-option-selected text-game-purple'
-                          : 'text-game-purple'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm font-black uppercase text-game-purple">Score</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: 'Classique', mode: 'classic' as const },
+                      { label: 'Lettres rares', mode: 'rareLetters' as const },
+                    ].map(({ label, mode }) => (
+                      <button
+                        key={mode}
+                        onClick={() => handleScoreMode(mode)}
+                        className={`segmented-option flex-1 text-sm ${
+                          (room?.scoreMode ?? 'classic') === mode ? 'segmented-option-selected text-game-purple' : 'text-game-purple'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {isHost && (
-              <div className="cartoon-card p-4">
-                {currentPlayer ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <AvatarToken avatar={currentPlayer.avatar} className="h-14 w-14" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
-                        <div className="truncate text-lg font-black text-game-blue">{currentPlayer.name}</div>
+            {/* Col 3 : Tu participes + Joueurs + Lancer */}
+            <div className="flex w-full flex-col gap-4 lg:w-[320px] lg:shrink-0">
+              {isHost && (
+                <div className="cartoon-card p-4">
+                  {currentPlayer ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <AvatarToken avatar={currentPlayer.avatar} className="h-14 w-14" />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-black uppercase text-game-purple">Tu participes aussi</div>
+                          <div className="truncate text-lg font-black text-game-blue">{currentPlayer.name}</div>
+                        </div>
+                      </div>
+                      <AvatarPicker value={currentPlayer.avatar} onChange={handleAvatarChange} compact />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <div className="text-sm font-black uppercase text-game-magenta">Depuis cet appareil</div>
+                        <div className="text-lg font-black text-game-purple">Je participe aussi</div>
+                      </div>
+                      <AvatarPicker value={hostPlayerAvatar} onChange={setHostPlayerAvatar} compact />
+                      <div className="flex gap-2">
+                        <input
+                          value={hostPlayerName}
+                          onChange={(e) => setHostPlayerName(e.target.value.slice(0, 20))}
+                          onKeyDown={(e) => e.key === 'Enter' && handleHostJoinAsPlayer()}
+                          placeholder="Ton pseudo"
+                          maxLength={20}
+                          className="min-w-0 flex-1 rounded-2xl border-[3px] border-game-purple bg-white px-3 py-3 text-base font-black text-game-purple placeholder-game-purple/45 shadow-cartoon-sm outline-none"
+                        />
+                        <button
+                          onClick={handleHostJoinAsPlayer}
+                          disabled={!hostPlayerName.trim()}
+                          className="btn-primary px-4 py-3 text-base"
+                        >
+                          OK
+                        </button>
                       </div>
                     </div>
-                    <AvatarPicker value={currentPlayer.avatar} onChange={handleAvatarChange} compact />
-                  </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <div className="status-pill bg-game-yellow px-4 py-1 text-xl text-game-purple">Joueurs</div>
+                <div className="font-display text-3xl font-extrabold text-game-purple">
+                  {room?.players.length ?? 0}
+                </div>
+              </div>
+              <div className="max-h-[280px] overflow-auto pr-1">
+                {room && room.players.length > 0 ? (
+                  <PlayerList players={room.players} recentJoinIds={recentJoinIds} />
                 ) : (
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <div className="text-sm font-black uppercase text-game-magenta">Depuis cet appareil</div>
-                      <div className="text-lg font-black text-game-purple">Je participe aussi</div>
-                    </div>
-                    <AvatarPicker value={hostPlayerAvatar} onChange={setHostPlayerAvatar} compact />
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        value={hostPlayerName}
-                        onChange={(e) => setHostPlayerName(e.target.value.slice(0, 20))}
-                        onKeyDown={(e) => e.key === 'Enter' && handleHostJoinAsPlayer()}
-                        placeholder="Ton pseudo"
-                        maxLength={20}
-                        className="min-w-0 flex-1 rounded-2xl border-[3px] border-game-purple bg-white px-3 py-3 text-base font-black text-game-purple placeholder-game-purple/45 shadow-cartoon-sm outline-none"
-                      />
-                      <button
-                        onClick={handleHostJoinAsPlayer}
-                        disabled={!hostPlayerName.trim()}
-                        className="btn-primary px-4 py-3 text-base"
-                      >
-                        OK
-                      </button>
-                    </div>
+                  <div className="rounded-[22px] border-[3px] border-dashed border-game-purple/30 py-6 text-center text-base font-black text-game-purple/40">
+                    En attente de joueurs...
                   </div>
                 )}
               </div>
-            )}
 
-            <div className="status-pill self-start bg-game-yellow px-4 py-1 text-xl text-game-purple">
-              Joueurs ({room?.players.length ?? 0})
-            </div>
-            <div className="max-h-[260px] overflow-auto pr-1">
-              {room && <PlayerList players={room.players} />}
+              <button
+                onClick={handleStart}
+                disabled={(room?.players.length ?? 0) === 0}
+                className="btn-primary py-5 text-3xl"
+              >
+                Lancer la partie !
+              </button>
             </div>
 
-            <button onClick={handleStart} disabled={(room?.players.length ?? 0) === 0} className="btn-primary text-2xl">
-              Lancer la partie
-            </button>
           </div>
         </div>
       )}
 
       {/* ── PLAYING ── */}
       {phase === 'playing' && room?.grid && room?.endsAt && (
-        <div className="game-content flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:gap-6 lg:overflow-hidden lg:p-6">
-          {/* Left: player scores */}
-          <div className="cartoon-panel flex shrink-0 flex-col gap-4 p-4 lg:w-64">
-            <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Scores</div>
-            <PlayingScoreCards players={room.players} />
-          </div>
+        <>
+          {showCountdown && <CountdownOverlay onDone={() => setShowCountdown(false)} />}
+          <div className="game-content flex flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:gap-6 lg:overflow-hidden lg:p-6">
+            {/* Left: player scores */}
+            <div className="cartoon-panel flex shrink-0 flex-col gap-4 p-4 lg:w-64">
+              <div className="status-pill self-start bg-game-purple px-4 py-1 text-white">Scores</div>
+              <PlayingScoreCards players={room.players} />
+            </div>
 
-          {/* Center: grid + timer */}
-          <div className="flex flex-1 flex-col items-center justify-center gap-6">
-            <Timer endsAt={room.endsAt} />
-            <Board grid={room.grid} />
-          </div>
+            {/* Center: grid + timer */}
+            <div className="flex flex-1 flex-col items-center justify-center gap-6">
+              <Timer endsAt={room.endsAt} />
+              <Board grid={room.grid} />
+            </div>
 
-          {/* Right: stats */}
-          <div className="flex shrink-0 flex-col justify-start gap-4 lg:w-64">
-            {isHost && currentPlayer && (
-              <button
-                onClick={() => {
-                  sound.playUiClick()
-                  setHostView('player')
-                }}
-                className="btn-primary text-xl"
-              >
-                Jouer mes mots
-              </button>
-            )}
+            {/* Right: action + event feed */}
+            <div className="flex shrink-0 flex-col gap-4 lg:w-64">
+              {isHost && currentPlayer && (
+                <button
+                  onClick={() => {
+                    sound.playUiClick()
+                    setHostView('player')
+                  }}
+                  className="btn-primary text-xl"
+                >
+                  Jouer mes mots
+                </button>
+              )}
+              <div className="cartoon-panel flex flex-col gap-3 p-4">
+                <div className="status-pill self-start bg-game-purple px-3 py-1 text-sm text-white">
+                  En direct
+                </div>
+                {feedEvents.length === 0 ? (
+                  <div className="py-3 text-center text-sm font-black text-game-purple/40">
+                    Les mots trouvés<br />apparaissent ici
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {feedEvents.map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="flex animate-fade-slide-up items-center gap-2 rounded-2xl border-2 border-game-purple px-3 py-2 shadow-cartoon-sm"
+                        style={{ background: ev.color }}
+                      >
+                        <AvatarToken avatar={ev.avatar} className="h-8 w-8 shrink-0" />
+                        <span className="truncate text-sm font-black text-game-purple">
+                          {ev.playerName}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── RESULTS cinematic (host only) ── */}
       {phase === 'results' && results && (
-        <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} />
+        <ResultsCinematic results={results} grid={room?.grid} onDone={handleRestart} roomCode={roomCode} />
       )}
     </div>
   )

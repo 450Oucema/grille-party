@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { CellPos, GridCell, PlayerResult } from '../types'
 import AvatarToken from './AvatarToken'
 import { sound } from '../audio/sound'
@@ -8,6 +9,7 @@ type Props = {
   grid?: GridCell[][]
   onDone: () => void
   hideReplay?: boolean
+  roomCode?: string
 }
 
 type RevealWord = {
@@ -47,6 +49,33 @@ function buildRevealList(results: PlayerResult[]): RevealWord[] {
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
+
+function ShareButton({ roomCode }: { roomCode?: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleShare = async () => {
+    if (!roomCode) return
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}join/${roomCode}`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Rejoins ma partie Grille Party !', url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    } catch {
+      // user dismissed share dialog
+    }
+    sound.playUiClick()
+  }
+
+  return (
+    <button onClick={handleShare} className="btn-secondary py-3 text-lg">
+      {copied ? 'Lien copié !' : 'Partager le lien'}
+    </button>
+  )
+}
 
 function pathKey(pos: CellPos): string {
   return `${pos.r},${pos.c}`
@@ -98,7 +127,7 @@ function RevealGrid({ grid, active }: { grid: GridCell[][]; active?: RevealWord 
   )
 }
 
-export default function ResultsCinematic({ results, grid, onDone, hideReplay }: Props) {
+export default function ResultsCinematic({ results, grid, onDone, hideReplay, roomCode }: Props) {
   const [phase, setPhase] = useState<Phase>('buzzer')
   const [revealIdx, setRevealIdx] = useState(-1)
   const [allRevealed, setAllRevealed] = useState(false)
@@ -233,8 +262,8 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
 
       {/* ── PODIUM ── */}
       {phase === 'podium' && (
-        <div className="game-content flex h-full w-full animate-bounce-in flex-col items-center justify-center gap-6 overflow-y-auto px-5 py-8 sm:px-8">
-          <div className="cartoon-title w-full text-center text-[clamp(3rem,12vw,5.8rem)] text-game-yellow">
+        <div className="game-content flex h-full w-full animate-bounce-in flex-col items-center justify-center gap-5 overflow-y-auto px-5 py-8 sm:px-8">
+          <div className="cartoon-title w-full text-center text-[clamp(2.6rem,11vw,5.4rem)] text-game-yellow">
             Classement final
           </div>
 
@@ -242,20 +271,21 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
             {results.map((r, i) => (
               <div
                 key={r.playerId}
-                className={`grid grid-cols-[2.25rem_3.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border-4 border-game-purple px-3 py-3 shadow-cartoon sm:grid-cols-[3rem_4rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 ${
+                className={`animate-podium-entry grid grid-cols-[2.25rem_3.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-[24px] border-4 border-game-purple px-3 py-3 shadow-cartoon sm:grid-cols-[3rem_4rem_minmax(0,1fr)_auto] sm:gap-4 sm:p-4 ${
                   i === 0
-                    ? 'bg-game-yellow scale-105'
+                    ? 'scale-[1.03] bg-game-yellow'
                     : i === 1
                     ? 'bg-game-lilac'
                     : 'bg-white'
                 }`}
+                style={{ animationDelay: `${i * 160}ms` }}
               >
                 <div className="text-center text-2xl sm:text-4xl">{MEDALS[i] ?? `${i + 1}`}</div>
                 <AvatarToken avatar={r.avatar} className="h-12 w-12 sm:h-14 sm:w-14" />
                 <div className="min-w-0">
                   <div className="truncate text-xl font-black leading-tight text-game-purple sm:text-2xl">{r.playerName}</div>
                   <div className="text-sm font-extrabold leading-snug text-game-blue sm:text-base">
-                    {r.wordCount} mots valides
+                    {r.wordCount} mot{r.wordCount !== 1 ? 's' : ''} valide{r.wordCount !== 1 ? 's' : ''}
                     {r.bestWord && (
                       <>
                         <span className="hidden sm:inline"> · </span>
@@ -272,15 +302,27 @@ export default function ResultsCinematic({ results, grid, onDone, hideReplay }: 
           </div>
 
           {!hideReplay && (
-            <button
-              onClick={() => {
-                sound.playReplay()
-                onDone()
-              }}
-              className="btn-primary text-2xl mt-2"
-            >
-              Rejouer
-            </button>
+            <div className="mt-2 flex w-full max-w-3xl flex-col gap-3 animate-podium-entry" style={{ animationDelay: `${results.length * 160 + 80}ms` }}>
+              <button
+                onClick={() => {
+                  sound.playReplay()
+                  onDone()
+                }}
+                className="btn-primary py-4 text-2xl"
+              >
+                Rejouer
+              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  to="/"
+                  className="btn-secondary py-3 text-center text-lg"
+                  onClick={() => sound.playUiClick()}
+                >
+                  Nouveau salon
+                </Link>
+                <ShareButton roomCode={roomCode} />
+              </div>
+            </div>
           )}
         </div>
       )}

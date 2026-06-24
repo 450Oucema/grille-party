@@ -23,16 +23,24 @@ export default function Timer({ endsAt, onExpire }: Props) {
   const secs = remaining % 60
   const isUrgent = remaining <= 30
   const isCritical = remaining <= 10
+  const isShaking = remaining <= 10 && remaining > 0
 
   return (
     <div
-      className={`status-pill inline-flex min-w-[8rem] items-center justify-center px-5 py-2 font-display text-5xl font-extrabold tabular-nums transition-all ${
+      className={`status-pill inline-flex min-w-[8rem] items-center justify-center px-5 py-2 font-display tabular-nums transition-all ${
         isCritical
-          ? 'bg-game-red text-white animate-timer-pulse'
+          ? 'bg-game-red text-white text-6xl'
           : isUrgent
-          ? 'bg-game-orange text-game-purple'
-          : 'bg-game-yellow text-game-purple'
+          ? 'bg-game-orange text-game-purple text-5xl'
+          : 'bg-game-yellow text-game-purple text-5xl'
       }`}
+      style={
+        isCritical
+          ? { animation: 'timerPulse 0.42s ease-in-out infinite, timerShake 0.5s ease-in-out infinite' }
+          : isShaking
+          ? { animation: 'timerShake 0.55s ease-in-out infinite' }
+          : undefined
+      }
     >
       {mins}:{secs.toString().padStart(2, '0')}
     </div>
