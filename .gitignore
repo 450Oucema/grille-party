@@ -4,3 +4,6 @@ node_modules
 dist
 storybook-static
 .storybook-home
+/client/src/stories/*
+/client/.storybook
+.idea

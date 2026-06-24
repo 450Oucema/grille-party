@@ -19,23 +19,15 @@ const PORT = parseInt(process.env.PORT ?? '3025', 10)
 const HOST = process.env.HOST ?? '127.0.0.1'
 const SOCKET_PATH = process.env.SOCKET_PATH ?? '/socket.io'
 
-loadDictionary()
-
-const app = express()
-app.use(express.json())
-
-const httpServer = createServer(app)
-const io = new Server(httpServer, {
-  path: SOCKET_PATH,
-  cors: {
-    origin: process.env.NODE_ENV === 'production' ? false : '*',
-    methods: ['GET', 'POST'],
-  },
-})
+let dictionaryLoaded = false
+function ensureDictionaryLoaded() {
+  if (dictionaryLoaded) return
+  loadDictionary()
+  dictionaryLoaded = true
+}
 
 // Rate limiting per socket for word:submit
-const wordSubmitTimestamps = new Map<string, number[]>()
-function rateLimitWord(socketId: string): boolean {
+function rateLimitWord(wordSubmitTimestamps: Map<string, number[]>, socketId: string): boolean {
   const now = Date.now()
   const ts = wordSubmitTimestamps.get(socketId) ?? []
   const recent = ts.filter(t => now - t < 1000)
@@ -49,7 +41,23 @@ function isRoomHost(room: { hostSocketId?: string; hostToken: string }, socketId
   return room.hostSocketId === socketId || (!!hostToken && hostToken === room.hostToken)
 }
 
-io.on('connection', (socket) => {
+export function createGrillePartyServer(options: { socketPath?: string } = {}) {
+  ensureDictionaryLoaded()
+
+  const app = express()
+  app.use(express.json())
+
+  const httpServer = createServer(app)
+  const io = new Server(httpServer, {
+    path: options.socketPath ?? SOCKET_PATH,
+    cors: {
+      origin: process.env.NODE_ENV === 'production' ? false : '*',
+      methods: ['GET', 'POST'],
+    },
+  })
+  const wordSubmitTimestamps = new Map<string, number[]>()
+
+  io.on('connection', (socket) => {
   // Client requests current room state (reconnect / navigation)
   socket.on('room:sync', ({ roomCode, playerId, hostToken }: { roomCode: string; playerId?: string; hostToken?: string }) => {
     const room = getRoom(roomCode)
@@ -65,10 +73,17 @@ io.on('connection', (socket) => {
       if (player) {
         player.socketId = socket.id
         player.connected = true
+        socket.emit('player:state', { id: player.id, words: [...player.words] })
+      } else {
+        socket.emit('error', { message: 'Session joueur introuvable.' })
       }
     }
-    if (hostToken && hostToken === room.hostToken) {
-      room.hostSocketId = socket.id
+    if (hostToken) {
+      if (hostToken === room.hostToken) {
+        room.hostSocketId = socket.id
+      } else {
+        socket.emit('error', { message: 'Session hôte introuvable.' })
+      }
     }
     socket.emit('room:state', toPublicRoom(room))
     if (room.phase === 'playing' && room.grid && room.endsAt) {
@@ -137,7 +152,7 @@ io.on('connection', (socket) => {
   })
 
   socket.on('word:submit', ({ roomCode, playerId, word }: { roomCode: string; playerId: string; word: string }) => {
-    if (!rateLimitWord(socket.id)) {
+    if (!rateLimitWord(wordSubmitTimestamps, socket.id)) {
       socket.emit('word:rejected-local', { word, reason: 'trop_vite' })
       return
     }
@@ -248,11 +263,17 @@ io.on('connection', (socket) => {
       }
     }
   })
-})
+  })
 
-// Health check
-app.get('/health', (_req, res) => res.json({ ok: true }))
+  // Health check
+  app.get('/health', (_req, res) => res.json({ ok: true }))
 
-httpServer.listen(PORT, HOST, () => {
-  console.log(`[server] Grille Party running on http://${HOST}:${PORT}`)
-})
+  return { app, httpServer, io }
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  const { httpServer } = createGrillePartyServer()
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`[server] Grille Party running on http://${HOST}:${PORT}`)
+  })
+}

@@ -120,10 +120,23 @@ export function toPublicRoom(room: Room): PublicRoom {
   }
 }
 
+export function cleanupExpiredRooms(now = Date.now(), maxAgeMs = 2 * 60 * 60 * 1000): number {
+  const cutoff = now - maxAgeMs
+  let removed = 0
+  for (const [code, room] of rooms.entries()) {
+    if (room.createdAt < cutoff) {
+      rooms.delete(code)
+      removed += 1
+    }
+  }
+  return removed
+}
+
+export function clearRoomsForTest(): void {
+  if (process.env.NODE_ENV === 'test') rooms.clear()
+}
+
 // Cleanup rooms older than 2h
 setInterval(() => {
-  const cutoff = Date.now() - 2 * 60 * 60 * 1000
-  for (const [code, room] of rooms.entries()) {
-    if (room.createdAt < cutoff) rooms.delete(code)
-  }
+  cleanupExpiredRooms()
 }, 10 * 60 * 1000)

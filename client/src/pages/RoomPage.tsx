@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { socket } from '../socket'
 import type { PublicPlayer, PublicRoom, PlayerResult, ScoreMode } from '../types'
 import AvatarPicker from '../components/AvatarPicker'
@@ -92,6 +92,10 @@ export default function RoomPage() {
   const [results, setResults] = useState<PlayerResult[] | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [soundMuted, setSoundMuted] = useState(sound.isMuted())
+  const [roomError, setRoomError] = useState<string | null>(null)
+  const [playerSessionLost, setPlayerSessionLost] = useState(false)
+  const [hostSessionLost, setHostSessionLost] = useState(false)
+  const [socketConnected, setSocketConnected] = useState(socket.connected)
 
   const isHost = !!hostToken
   const currentPlayer = room?.players.find(p => p.id === playerId)
@@ -122,9 +126,13 @@ export default function RoomPage() {
   useEffect(() => {
     socket.connect()
 
-    socket.on('room:state', (r: PublicRoom) => setRoom(r))
+    socket.on('room:state', (r: PublicRoom) => {
+      setRoomError(null)
+      setRoom(r)
+    })
 
     socket.on('player:state', ({ id }: { id: string; words: string[] }) => {
+      setPlayerSessionLost(false)
       setPlayerId(id)
       if (roomCode) {
         sessionStorage.setItem(`playerId:${roomCode}`, id)
@@ -160,11 +168,34 @@ export default function RoomPage() {
     })
 
     socket.on('error', ({ message }: { message: string }) => {
+      if (message === 'Salle introuvable.' || message === 'Salon introuvable.') {
+        setRoom(null)
+        setResults(null)
+        setRoomError('Salon introuvable')
+        return
+      }
+      if (message === 'Session joueur introuvable.') {
+        if (roomCode) {
+          sessionStorage.removeItem(`playerId:${roomCode}`)
+        }
+        sessionStorage.removeItem('playerId')
+        setPlayerId(null)
+        setPlayerSessionLost(true)
+        return
+      }
+      if (message === 'Session hôte introuvable.') {
+        if (roomCode) {
+          sessionStorage.removeItem(`hostToken:${roomCode}`)
+        }
+        setHostSessionLost(true)
+        return
+      }
       console.error(message)
     })
 
     // Request current room state on (re)connect
     const syncRoom = () => {
+      setSocketConnected(socket.connected)
       if (roomCode) {
         socket.emit('room:sync', {
           roomCode,
@@ -173,11 +204,14 @@ export default function RoomPage() {
         })
       }
     }
+    const markDisconnected = () => setSocketConnected(false)
     socket.on('connect', syncRoom)
+    socket.on('disconnect', markDisconnected)
     syncRoom()
 
     return () => {
       socket.off('connect', syncRoom)
+      socket.off('disconnect', markDisconnected)
       socket.off('room:state')
       socket.off('player:state')
       socket.off('game:started')
@@ -240,6 +274,63 @@ export default function RoomPage() {
     emitWhenConnected('player:avatar', { roomCode, playerId, avatar })
   }
 
+  if (roomError) {
+    return (
+      <div className="game-screen flex min-h-dvh items-center justify-center p-6">
+        <div className="game-content cartoon-card flex w-full max-w-md flex-col items-center gap-5 p-6 text-center">
+          <GameLogo size="sm" />
+          <div>
+            <div className="font-display text-4xl font-black text-game-purple">{roomError}</div>
+            <div className="mt-2 text-lg font-extrabold text-game-blue">
+              Le salon {roomCode} n'existe plus ou le code est incorrect.
+            </div>
+          </div>
+          <Link to="/" className="btn-primary w-full py-3 text-xl">
+            Retour a l'accueil
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (playerSessionLost) {
+    return (
+      <div className="game-screen flex min-h-dvh items-center justify-center p-6">
+        <div className="game-content cartoon-card flex w-full max-w-md flex-col items-center gap-5 p-6 text-center">
+          <GameLogo size="sm" />
+          <div>
+            <div className="font-display text-4xl font-black text-game-purple">Session perdue</div>
+            <div className="mt-2 text-lg font-extrabold text-game-blue">
+              Ton ancienne session joueur n'est plus reconnue dans le salon {roomCode}.
+            </div>
+          </div>
+          <Link to={`/join/${roomCode}`} className="btn-primary w-full py-3 text-xl">
+            Rejoindre a nouveau
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (hostSessionLost) {
+    return (
+      <div className="game-screen flex min-h-dvh items-center justify-center p-6">
+        <div className="game-content cartoon-card flex w-full max-w-md flex-col items-center gap-5 p-6 text-center">
+          <GameLogo size="sm" />
+          <div>
+            <div className="font-display text-4xl font-black text-game-purple">Session hôte perdue</div>
+            <div className="mt-2 text-lg font-extrabold text-game-blue">
+              Ce navigateur ne peut plus administrer le salon {roomCode}.
+            </div>
+          </div>
+          <Link to="/" className="btn-primary w-full py-3 text-xl">
+            Creer un nouveau salon
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   // ─── MOBILE PLAYER VIEW ───────────────────────────────────────────────────
   if (isPlayerView) {
     if (phase === 'results' && results) {
@@ -249,6 +340,11 @@ export default function RoomPage() {
     return (
       <div className="game-screen flex flex-col">
         <SoundToggle className="absolute bottom-3 right-3 z-20 px-2 py-1 text-xs" />
+        {!socketConnected && (
+          <div className="absolute left-3 top-3 z-30 rounded-full border-[3px] border-game-purple bg-game-yellow px-3 py-1 text-xs font-black text-game-purple shadow-cartoon-sm">
+            Reconnexion...
+          </div>
+        )}
         {/* Header */}
         <div className="game-content flex items-center justify-between gap-2 px-3 py-3">
           <div className="status-pill bg-game-yellow px-3 py-2 text-lg text-game-purple">{roomCode}</div>
@@ -326,6 +422,11 @@ export default function RoomPage() {
   return (
     <div className="game-screen flex flex-col lg:h-screen lg:overflow-hidden">
       <SoundToggle className="absolute right-4 top-4 z-20" />
+      {!socketConnected && (
+        <div className="absolute left-4 top-4 z-30 rounded-full border-[3px] border-game-purple bg-game-yellow px-4 py-2 text-sm font-black text-game-purple shadow-cartoon-sm">
+          Reconnexion...
+        </div>
+      )}
       {/* ── LOBBY ── */}
       {phase === 'lobby' && (
         <div className="game-content flex flex-1 flex-col items-stretch gap-6 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-center lg:gap-10 lg:p-8">
