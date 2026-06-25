@@ -132,6 +132,7 @@ export default function RoomPage() {
     (roomCode ? sessionStorage.getItem(`playerId:${roomCode}`) : null)
 
   const [playerId, setPlayerId] = useState<string | null>(initialPlayerId)
+  const playerIdRef = useRef<string | null>(initialPlayerId)
   const [hostView, setHostView] = useState<'host' | 'player'>('host')
   const [hostPlayerName, setHostPlayerName] = useState('')
   const [hostPlayerAvatar, setHostPlayerAvatar] = useState(0)
@@ -212,6 +213,7 @@ export default function RoomPage() {
 
     socket.on('player:state', ({ id }: { id: string; words: string[] }) => {
       setPlayerSessionLost(false)
+      playerIdRef.current = id
       setPlayerId(id)
       if (roomCode) {
         sessionStorage.setItem(`playerId:${roomCode}`, id)
@@ -224,7 +226,8 @@ export default function RoomPage() {
       setResults(null)
       setFeedEvents([])
       setShowCountdown(true)
-      setHostView('host')
+      if (playerIdRef.current) setHostView('player')
+      else setHostView('host')
     })
 
     socket.on('game:ended', ({ results: r }: { results: PlayerResult[] }) => {
@@ -268,6 +271,7 @@ export default function RoomPage() {
           sessionStorage.removeItem(`playerId:${roomCode}`)
         }
         sessionStorage.removeItem('playerId')
+        playerIdRef.current = null
         setPlayerId(null)
         setPlayerSessionLost(true)
         return
@@ -428,7 +432,7 @@ export default function RoomPage() {
     }
 
     return (
-      <div className="game-screen flex flex-col">
+      <div className="game-screen flex flex-col items-stretch">
         {showCountdown && phase === 'playing' && <CountdownOverlay onDone={() => setShowCountdown(false)} />}
         <SoundToggle className="absolute bottom-3 right-3 z-20 px-2 py-1 text-xs" />
         {!socketConnected && (
@@ -436,6 +440,8 @@ export default function RoomPage() {
             Reconnexion...
           </div>
         )}
+        {/* Centered column for desktop */}
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
         {/* Header */}
         <div className="game-content flex items-center justify-between gap-2 px-3 py-3">
           <div className="status-pill bg-game-yellow px-3 py-2 text-lg text-game-purple">{roomCode}</div>
@@ -505,6 +511,7 @@ export default function RoomPage() {
           </div>
         )}
 
+        </div>{/* end centered column */}
       </div>
     )
   }

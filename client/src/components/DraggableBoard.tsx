@@ -110,13 +110,14 @@ export default function DraggableBoard({ grid, onSubmit, lastFeedback, disabled 
     return () => el.removeEventListener('touchmove', onTouchMove)
   }, [tryAddCell])
 
-  // Taille dynamique : la grille prend presque toute la largeur d'écran
+  // Taille dynamique : la grille prend presque toute la largeur d'écran (max 512px sur desktop)
   const gapPx = size <= 4 ? 10 : 8
   const sidePad = 8 // px de padding total autour de la zone gestuelle
   const totalGap = (size - 1) * gapPx
   const chromePx = 64 // page padding + border + inner grid padding
-  const cellPx = `calc((100vw - ${chromePx + totalGap}px) / ${size})`
-  const fontPx = `calc((100vw - ${chromePx + totalGap}px) / ${size} * ${size <= 4 ? 0.42 : 0.38})`
+  const baseWidth = `min(100vw, 512px)`
+  const cellPx = `calc((${baseWidth} - ${chromePx + totalGap}px) / ${size})`
+  const fontPx = `calc((${baseWidth} - ${chromePx + totalGap}px) / ${size} * ${size <= 4 ? 0.42 : 0.38})`
 
   const lastCell = path[path.length - 1]
   const word = getWord(path, grid)
